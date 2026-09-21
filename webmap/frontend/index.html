@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>CBU / KRAL Live Aircraft Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link
+    href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css"
+    rel="stylesheet"
+  />
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div id="map"></div>
+
+  <div id="controls">
+    <div id="focal-buttons">
+      <button data-focal="overview" class="active">Overview</button>
+      <button data-focal="cbu">CBU Campus</button>
+      <button data-focal="kral">KRAL Airport</button>
+    </div>
+    <div id="layer-toggle">
+      <button id="toggle-basemap">Switch to Satellite</button>
+    </div>
+    <div id="status">Loading...</div>
+  </div>
+
+  <script src="/config.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
