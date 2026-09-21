@@ -10,7 +10,7 @@ const CONFIG = {
     overview: {
       label: "Overview",
       center: [-117.4433, 33.9430],
-      zoom: 12.5,
+      zoom: 10.3,
       pitch: 0,
       bearing: 0,
     },
