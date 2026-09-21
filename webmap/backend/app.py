@@ -103,10 +103,11 @@ async def get_buildings():
         override = overrides.get(str(props.get("osm_id")))
         if not override:
             continue
-        if override.get("name"):
-            props["name"] = override["name"]
-        if override.get("description"):
-            props["description"] = override["description"]
+        # Only non-empty values override - a blank field in the file means
+        # "leave whatever OpenStreetMap had", not "blank it out".
+        for field in ("name", "type", "description"):
+            if override.get(field):
+                props[field] = override[field]
         applied += 1
 
     buildings["overrides_applied"] = applied

@@ -40,25 +40,29 @@ disown
 
 ## Adding building names / descriptions
 
-Most CBU buildings have no name in OpenStreetMap. To fill them in:
+`webmap/data/building_info.json` already has an entry for every building
+(223 of them), pre-filled with whatever OpenStreetMap knew. To edit one:
 
 1. Click a building on the map - the popup shows its `osm_id`.
-2. Add an entry to `webmap/data/building_info.json`:
+2. Find that id in the file and fill in what you want:
 
 ```json
-{
-  "233663002": {
-    "name": "Engineering Building",
-    "description": "Whatever you want shown in the popup."
-  }
+"233663002": {
+  "name": "Engineering Building",
+  "type": "Academic",
+  "description": "Whatever you want shown in the popup."
 }
 ```
 
 3. Reload the page. That's it - no restart, no re-fetching OSM data.
 
-Grey buildings are unnamed, yellow ones are named, so the grey ones are
-what's left to do. A JSON typo won't break the map, it just gets ignored
-(check `webmap.log` if an entry doesn't show up).
+Notes:
+- Works on both grey (unnamed) and yellow (named) buildings.
+- Leaving a field blank keeps whatever OSM had - so you can add a
+  description to a named building without retyping its name.
+- Named buildings are listed first in the file, then the 147 blank ones.
+- A JSON typo won't break the map, the file just gets ignored (check
+  `webmap.log` if an entry doesn't show up).
 
 ## Checking things are running
 
