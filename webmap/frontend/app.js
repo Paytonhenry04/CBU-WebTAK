@@ -76,7 +76,7 @@ const map = new maplibregl.Map({
 map.addControl(new maplibregl.NavigationControl(), "top-right");
 
 function addCustomLayers() {
-  if (!map.getImage("plane-icon")) {
+  if (!map.hasImage("plane-icon")) {
     map.addImage("plane-icon", makePlaneIconData(), { pixelRatio: 2 });
   }
 
@@ -227,24 +227,40 @@ map.on("click", "cbu-buildings-fill", (e) => {
     .addTo(map);
 });
 
+function aircraftPopupHTML(p) {
+  const heading = p.heading != null && p.heading !== "" ? `${Math.round(p.heading)}°` : "unknown";
+  return (
+    `<strong>${p.callsign || p.reg}</strong><br>` +
+    `Registration: ${p.reg}<br>` +
+    `Type: ${p.type || "unknown"}<br>` +
+    `Owner: ${p.owner || "unknown"}<br>` +
+    `Altitude: ${p.alt_ft} ft<br>` +
+    `Speed: ${p.speed_kt} kt<br>` +
+    `Heading: ${heading}<br>` +
+    `Departure/Arrival: not available (no public source)<br>` +
+    `Pilot: not available (no public source)`
+  );
+}
+
 map.on("click", "aircraft-symbol", (e) => {
   const p = e.features[0].properties;
-  const heading = p.heading != null && p.heading !== "" ? `${Math.round(p.heading)}°` : "unknown";
   new maplibregl.Popup()
     .setLngLat(e.lngLat)
-    .setHTML(
-      `<strong>${p.callsign || p.reg}</strong><br>` +
-        `Registration: ${p.reg}<br>` +
-        `Type: ${p.type || "unknown"}<br>` +
-        `Owner: ${p.owner || "unknown"}<br>` +
-        `Altitude: ${p.alt_ft} ft<br>` +
-        `Speed: ${p.speed_kt} kt<br>` +
-        `Heading: ${heading}<br>` +
-        `Departure/Arrival: not available (no public source)<br>` +
-        `Pilot: not available (no public source)`
-    )
+    .setHTML(aircraftPopupHTML(p))
     .addTo(map);
 });
+
+// Fly to and show the popup for a specific aircraft by registration,
+// used by the "Active Flights" list.
+function selectAircraft(reg) {
+  const ac = latestAircraft.find((a) => a.reg === reg);
+  if (!ac) return;
+  map.easeTo({ center: [ac.lon, ac.lat], zoom: 13, duration: 1200 });
+  new maplibregl.Popup()
+    .setLngLat([ac.lon, ac.lat])
+    .setHTML(aircraftPopupHTML(ac))
+    .addTo(map);
+}
 
 ["cbu-buildings-fill", "aircraft-symbol"].forEach((layer) => {
   map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
@@ -253,12 +269,30 @@ map.on("click", "aircraft-symbol", (e) => {
 
 // --- Aircraft polling ---
 const statusEl = document.getElementById("status");
+const aircraftListEl = document.getElementById("aircraft-list");
+let latestAircraft = [];
+
+function renderAircraftList(data) {
+  if (data.length === 0) {
+    aircraftListEl.textContent = "None currently tracked";
+    return;
+  }
+  aircraftListEl.innerHTML = "";
+  data.forEach((a) => {
+    const row = document.createElement("button");
+    row.className = "aircraft-row";
+    row.textContent = `${a.callsign || a.reg} (${a.type || "?"})`;
+    row.addEventListener("click", () => selectAircraft(a.reg));
+    aircraftListEl.appendChild(row);
+  });
+}
 
 async function pollAircraft() {
   try {
     const res = await fetch("/api/aircraft");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    latestAircraft = data;
     const fc = {
       type: "FeatureCollection",
       features: data.map((a) => ({
@@ -269,6 +303,7 @@ async function pollAircraft() {
     };
     const src = map.getSource("aircraft");
     if (src) src.setData(fc);
+    renderAircraftList(data);
     statusEl.textContent = `${data.length} aircraft tracked - updated ${new Date().toLocaleTimeString()}`;
   } catch (err) {
     statusEl.textContent = `Connection issue: ${err.message}`;
