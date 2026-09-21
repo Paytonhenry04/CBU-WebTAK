@@ -80,6 +80,11 @@ html, body, #map {
   background: #1e293b;
 }
 
+.aircraft-row.selected {
+  background: #166534;
+  border-color: #22c55e;
+}
+
 #status {
   font-size: 11px;
   color: #9ca3af;

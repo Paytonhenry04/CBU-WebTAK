@@ -25,25 +25,34 @@ function circlePolygon(centerLonLat, radiusMeters, points = 64) {
   };
 }
 
-// Loads the plane icon via map.loadImage(). MapLibre GL JS v4's loadImage()
-// is Promise-based (single arg, resolves to either the image directly or
-// {data: image} depending on version) - NOT the old (url, callback) form.
-async function loadPlaneIcon() {
-  if (map.hasImage("plane-icon")) return;
-  const svg =
-    '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">' +
-    '<polygon points="24,4 40,42 24,32 8,42" fill="#38bdf8" stroke="#0f172a" stroke-width="2"/>' +
-    "</svg>";
-  const url = "data:image/svg+xml;base64," + btoa(svg);
-  try {
-    const result = await map.loadImage(url);
-    const image = result && result.data ? result.data : result;
-    if (!map.hasImage("plane-icon")) {
-      map.addImage("plane-icon", image);
+// Loads the plane icon via a plain DOM Image element instead of MapLibre's
+// own loadImage() pipeline (which has tripped up twice now on this
+// project - wrong callback signature, then an unconfirmed resolve shape).
+// new Image() + onload + addImage() is the simplest, most broadly-supported
+// path and doesn't depend on MapLibre's internal request/decode handling.
+function loadPlaneIcon() {
+  return new Promise((resolve) => {
+    if (map.hasImage("plane-icon")) {
+      resolve();
+      return;
     }
-  } catch (error) {
-    console.error("Failed to load plane icon:", error);
-  }
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">' +
+      '<polygon points="24,4 40,42 24,32 8,42" fill="#38bdf8" stroke="#0f172a" stroke-width="2"/>' +
+      "</svg>";
+    const img = new Image();
+    img.onload = () => {
+      if (!map.hasImage("plane-icon")) {
+        map.addImage("plane-icon", img);
+      }
+      resolve();
+    };
+    img.onerror = (err) => {
+      console.error("Failed to load plane icon:", err);
+      resolve();
+    };
+    img.src = "data:image/svg+xml;base64," + btoa(svg);
+  });
 }
 
 function satelliteStyle() {
@@ -167,7 +176,7 @@ async function addCustomLayers() {
       type: "line",
       source: "aircraft-track",
       layout: { "line-join": "round", "line-cap": "round" },
-      paint: { "line-color": "#facc15", "line-width": 2.5, "line-opacity": 0.85 },
+      paint: { "line-color": "#22c55e", "line-width": 2.5, "line-opacity": 0.9 },
     });
   }
 
@@ -176,6 +185,21 @@ async function addCustomLayers() {
     map.addSource("aircraft", {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  // Guaranteed-visible fallback marker, always drawn under the plane icon -
+  // if the custom icon image ever fails to load, position is still visible.
+  if (!map.getLayer("aircraft-dot")) {
+    map.addLayer({
+      id: "aircraft-dot",
+      type: "circle",
+      source: "aircraft",
+      paint: {
+        "circle-radius": 6,
+        "circle-color": "#38bdf8",
+        "circle-stroke-color": "#0f172a",
+        "circle-stroke-width": 1.5,
+      },
     });
   }
   if (!map.getLayer("aircraft-symbol")) {
@@ -289,29 +313,73 @@ async function showTrack(reg) {
   }
 }
 
-map.on("click", "aircraft-symbol", (e) => {
-  const p = e.features[0].properties;
-  new maplibregl.Popup()
-    .setLngLat(e.lngLat)
-    .setHTML(aircraftPopupHTML(p))
-    .addTo(map);
-  showTrack(p.reg);
-});
-
-// Fly to and show the popup + flight trail for a specific aircraft by
-// registration, used by the "Active Flights" list.
-function selectAircraft(reg) {
-  const ac = latestAircraft.find((a) => a.reg === reg);
-  if (!ac) return;
-  map.easeTo({ center: [ac.lon, ac.lat], zoom: 13, duration: 1200 });
-  new maplibregl.Popup()
-    .setLngLat([ac.lon, ac.lat])
-    .setHTML(aircraftPopupHTML(ac))
-    .addTo(map);
-  showTrack(reg);
+function clearTrack() {
+  const src = map.getSource("aircraft-track");
+  if (src) src.setData({ type: "FeatureCollection", features: [] });
 }
 
-["cbu-buildings-fill", "aircraft-symbol"].forEach((layer) => {
+// --- Selection state: only one aircraft's details/trail shown at a time.
+// Icons themselves are always visible regardless of selection. ---
+let selectedReg = null;
+let selectedPopup = null;
+
+function deselectAircraft() {
+  selectedReg = null;
+  if (selectedPopup) {
+    // Null it before remove() - remove() fires "close", which is wired
+    // to this same function, so this avoids re-entrant double-removal.
+    const popup = selectedPopup;
+    selectedPopup = null;
+    popup.off("close", deselectAircraft);
+    popup.remove();
+  }
+  clearTrack();
+  document
+    .querySelectorAll(".aircraft-row.selected")
+    .forEach((el) => el.classList.remove("selected"));
+}
+
+function selectAircraft(reg, lngLat) {
+  if (selectedReg === reg) {
+    deselectAircraft();
+    return;
+  }
+  const ac = latestAircraft.find((a) => a.reg === reg);
+  if (!ac) return;
+
+  if (selectedPopup) selectedPopup.remove();
+  selectedReg = reg;
+
+  const at = lngLat || [ac.lon, ac.lat];
+  map.easeTo({ center: [ac.lon, ac.lat], zoom: 13, duration: 1200 });
+  selectedPopup = new maplibregl.Popup({ closeOnClick: false })
+    .setLngLat(at)
+    .setHTML(aircraftPopupHTML(ac))
+    .addTo(map);
+  selectedPopup.on("close", deselectAircraft);
+  showTrack(reg);
+
+  document
+    .querySelectorAll(".aircraft-row")
+    .forEach((el) => el.classList.toggle("selected", el.dataset.reg === reg));
+}
+
+map.on("click", "aircraft-symbol", (e) => {
+  selectAircraft(e.features[0].properties.reg, e.lngLat);
+});
+map.on("click", "aircraft-dot", (e) => {
+  selectAircraft(e.features[0].properties.reg, e.lngLat);
+});
+
+// Clicking empty map (not on a plane or building) deselects.
+map.on("click", (e) => {
+  const hits = map.queryRenderedFeatures(e.point, {
+    layers: ["aircraft-symbol", "aircraft-dot", "cbu-buildings-fill"],
+  });
+  if (hits.length === 0 && selectedReg) deselectAircraft();
+});
+
+["cbu-buildings-fill", "aircraft-symbol", "aircraft-dot"].forEach((layer) => {
   map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
   map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
 });
@@ -329,7 +397,8 @@ function renderAircraftList(data) {
   aircraftListEl.innerHTML = "";
   data.forEach((a) => {
     const row = document.createElement("button");
-    row.className = "aircraft-row";
+    row.className = "aircraft-row" + (a.reg === selectedReg ? " selected" : "");
+    row.dataset.reg = a.reg;
     row.textContent = `${a.callsign || a.reg} (${a.type || "?"})`;
     row.addEventListener("click", () => selectAircraft(a.reg));
     aircraftListEl.appendChild(row);
