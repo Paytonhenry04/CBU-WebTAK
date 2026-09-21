@@ -34,8 +34,59 @@ ADSB_URL = f"https://opendata.adsb.fi/api/v2/lat/{KRAL_LAT}/lon/{KRAL_LON}/dist/
 COT_URL = "tcp://127.0.0.1:8087"
 
 
+SELF_UID = "CBU-ADSB-FEED"
+PRESENCE_SECONDS = 120     # how often to re-announce ourselves to the server
+
+
 def iso(dt):
     return dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+
+def make_presence():
+    """Self-presence CoT, the way a real TAK client announces itself.
+
+    FreeTAKServer only relays a client's CoT on to *other* connected clients
+    once that client has registered itself this way. pytak's default hello is
+    a bare 't-x-d-d' ping, which FTS logs as 'takPing' and then errors on - so
+    without this, aircraft events reach the server but are never forwarded to
+    anything (confirmed by testing: a registered listener received 0 events
+    from an unregistered sender, and all of them once the sender registered).
+    """
+    now = datetime.now(timezone.utc)
+    event = ET.Element("event")
+    event.set("version", "2.0")
+    event.set("uid", SELF_UID)
+    event.set("type", "a-f-G-U-C")   # ground/friendly/unit/combat - a "device"
+    event.set("how", "m-g")
+    event.set("time", iso(now))
+    event.set("start", iso(now))
+    event.set("stale", iso(now + timedelta(seconds=PRESENCE_SECONDS * 2)))
+
+    point = ET.SubElement(event, "point")
+    point.set("lat", str(KRAL_LAT))
+    point.set("lon", str(KRAL_LON))
+    point.set("hae", "0.0")
+    point.set("ce", "9999999.0")
+    point.set("le", "9999999.0")
+
+    detail = ET.SubElement(event, "detail")
+    takv = ET.SubElement(detail, "takv")
+    takv.set("os", "linux")
+    takv.set("version", "1.0")
+    takv.set("device", "adsb_tak.py")
+    takv.set("platform", "CBU-ADSB-Feed")
+    contact = ET.SubElement(detail, "contact")
+    contact.set("callsign", SELF_UID)
+    contact.set("endpoint", "*:-1:stcp")
+    ET.SubElement(detail, "uid").set("Droid", SELF_UID)
+    group = ET.SubElement(detail, "__group")
+    group.set("name", "Cyan")
+    group.set("role", "Team Member")
+    ET.SubElement(detail, "status").set("battery", "100")
+    track = ET.SubElement(detail, "track")
+    track.set("course", "0.0")
+    track.set("speed", "0.0")
+    return ET.tostring(event)
 
 
 def make_cot(ac):
@@ -50,7 +101,8 @@ def make_cot(ac):
         return None
 
     alt_baro = ac.get("alt_baro", 0)
-    alt_ft = 0 if alt_baro == "ground" else float(alt_baro or 0)
+    on_ground = alt_baro == "ground"
+    alt_ft = 0 if on_ground else float(alt_baro or 0)
     hae = alt_ft * 0.3048
 
     gs_kt = float(ac.get("gs", 0) or 0)
@@ -92,6 +144,10 @@ def make_cot(ac):
     aircraft.set("type", ac_type)
     aircraft.set("owner", owner)
     aircraft.set("hex", hex_id)
+    # Carried explicitly because hae=0 alone can't distinguish "on the
+    # ground" from "no altitude reported", and the web map needs the
+    # ground->airborne transition to anchor a flight trail at the runway.
+    aircraft.set("ground", "true" if on_ground else "false")
 
     remarks = f"CBU aircraft {reg} | alt {int(alt_ft)} ft | gs {int(gs_kt)} kt"
     if ac_type:
@@ -113,9 +169,16 @@ async def fetch_cbu_aircraft(session):
 
 class ADSBSender(pytak.Worker):
     async def run(self):
+        last_presence = 0.0
         async with aiohttp.ClientSession() as session:
             while True:
                 try:
+                    now = asyncio.get_event_loop().time()
+                    if now - last_presence > PRESENCE_SECONDS:
+                        await self.put_queue(make_presence())
+                        last_presence = now
+                        self._logger.info("Announced presence to TAK server")
+
                     hits = await fetch_cbu_aircraft(session)
                     for ac in hits:
                         cot = make_cot(ac)

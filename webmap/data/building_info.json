@@ -1,7 +1,7 @@
 {
   "_example": {
-    "name": "Example Hall",
-    "type": "Classroom",
+    "name": "Leave as is",
+    "type": "CBU Facilites, Housing, Dinning, CBU Atheltics, Parking",
     "description": "Delete this entry. Each real entry is keyed by the osm_id shown in that building's popup on the map. All three fields are optional - a blank one just leaves whatever OpenStreetMap had. Keys starting with _ are ignored."
   },
   "234178045": {
@@ -40,7 +40,7 @@
     "description": ""
   },
   "954138793": {
-    "name": "Ceramics",
+    "name": "The Palm",
     "type": "University",
     "description": ""
   },
@@ -70,7 +70,7 @@
     "description": ""
   },
   "233662993": {
-    "name": "Engineering Building",
+    "name": "CBU College of Architecture",
     "type": "",
     "description": ""
   },
@@ -80,12 +80,7 @@
     "description": ""
   },
   "234178055": {
-    "name": "Facilities & Planning Services",
-    "type": "",
-    "description": ""
-  },
-  "609836056": {
-    "name": "Food Mart",
+    "name": "CBU Facilities & Maintenance Services",
     "type": "",
     "description": ""
   },
@@ -132,7 +127,7 @@
   "233663041": {
     "name": "Lancer Palms",
     "type": "University",
-    "description": ""
+    "description": "The Lancer Palms building serves as an essential off-campus administrative hub, providing centralized university operational services including the CBU Human Resources Department, the Safety Services dispatch office, and Facilities Planning and Operations."
   },
   "233663010": {
     "name": "Mail & Shipping Services",
@@ -155,8 +150,8 @@
     "description": ""
   },
   "609836055": {
-    "name": "Shell",
-    "type": "Roof",
+    "name": "Berri Brothers",
+    "type": "Gas Station",
     "description": ""
   },
   "234178040": {
@@ -435,12 +430,12 @@
     "description": ""
   },
   "234178046": {
-    "name": "",
+    "name": "Yeager Building",
     "type": "",
-    "description": ""
+    "description": "Yeager Center serves as CBU's primary student services and administrative hub, offering essential enrollment and campus life services that include the Financial Aid Office, the Student Accounts Office, the Office of the Registrar, the Academic Advising Center, Classrooms, and the university's main executive leadership suites."
   },
   "234178048": {
-    "name": "",
+    "name": "James Building (South) 4-Story",
     "type": "",
     "description": ""
   },
@@ -480,12 +475,12 @@
     "description": ""
   },
   "238218622": {
-    "name": "",
+    "name": "Tower Hall",
     "type": "",
     "description": ""
   },
   "238218626": {
-    "name": "",
+    "name": "Tower Hall",
     "type": "",
     "description": ""
   },
@@ -1000,27 +995,27 @@
     "description": ""
   },
   "958305759": {
-    "name": "",
+    "name": "University Place Apartments",
     "type": "University",
     "description": ""
   },
   "958305760": {
-    "name": "",
+    "name": "University Place Apartments",
     "type": "University",
     "description": ""
   },
   "958305761": {
-    "name": "",
+    "name": "University Place Apartments",
     "type": "University",
     "description": ""
   },
   "958305762": {
-    "name": "",
+    "name": "University Place Apartments",
     "type": "University",
     "description": ""
   },
   "958305763": {
-    "name": "",
+    "name": "University Place Apartments",
     "type": "University",
     "description": ""
   },
@@ -1095,12 +1090,12 @@
     "description": ""
   },
   "958971751": {
-    "name": "",
+    "name": "University Place Apartments",
     "type": "University",
     "description": ""
   },
   "958971752": {
-    "name": "",
+    "name": "University Place Apartments",
     "type": "University",
     "description": ""
   },
