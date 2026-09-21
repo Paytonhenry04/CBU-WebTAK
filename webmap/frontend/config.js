@@ -46,7 +46,9 @@ const CONFIG = {
   },
 
   GEO_DATA: {
-    CBU_BUILDINGS: "/static/geo/cbu_buildings.geojson",
+    // Served by the backend rather than as a static file so that local
+    // name/description overrides in data/building_info.json are merged in.
+    CBU_BUILDINGS: "/api/buildings",
     CBU_CAMPUS: "/static/geo/cbu_campus.geojson",
     KRAL_AIRPORT: "/static/geo/kral_airport.geojson",
   },

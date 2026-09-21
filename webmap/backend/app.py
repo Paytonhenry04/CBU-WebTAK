@@ -11,6 +11,7 @@ reliable end-to-end (LAN and genuinely external) every time it was tested.
 """
 
 import asyncio
+import json
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -72,6 +73,44 @@ async def get_aircraft():
 @app.get("/api/aircraft/{reg}/track")
 async def get_track(reg: str):
     return JSONResponse(adsb_poller.TRACK_STATE.get(reg.upper(), []))
+
+
+@app.get("/api/buildings")
+async def get_buildings():
+    """CBU building footprints with local name/description overrides applied.
+
+    Both files are re-read per request (they're small), so editing
+    data/building_info.json takes effect on a page reload - no need to
+    re-run the Overpass fetch, which is slow and occasionally 504s.
+    """
+    buildings = json.loads((DATA_DIR / "cbu_buildings.geojson").read_text())
+
+    overrides = {}
+    info_path = DATA_DIR / "building_info.json"
+    if info_path.exists():
+        try:
+            overrides = {
+                key: value
+                for key, value in json.loads(info_path.read_text()).items()
+                if not key.startswith("_")
+            }
+        except json.JSONDecodeError as exc:
+            logger.warning("building_info.json is not valid JSON (%s), ignoring", exc)
+
+    applied = 0
+    for feature in buildings.get("features", []):
+        props = feature.get("properties", {})
+        override = overrides.get(str(props.get("osm_id")))
+        if not override:
+            continue
+        if override.get("name"):
+            props["name"] = override["name"]
+        if override.get("description"):
+            props["description"] = override["description"]
+        applied += 1
+
+    buildings["overrides_applied"] = applied
+    return JSONResponse(buildings)
 
 
 @app.get("/api/health")
