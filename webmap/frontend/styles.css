@@ -105,6 +105,33 @@ html, body, #map {
   line-height: 1.5;
 }
 
+#legend {
+  border-top: 1px solid #334155;
+  padding-top: 6px;
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+.legend-heading {
+  color: #9ca3af;
+  margin-bottom: 4px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 0;
+}
+
+.swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  border: 1px solid #0f172a;
+  flex: none;
+}
+
 #aircraft-details {
   position: absolute;
   bottom: 12px;
@@ -172,4 +199,8 @@ html, body, #map {
 
 .osm-id code {
   user-select: all;
+}
+
+#status.warn {
+  color: #fbbf24;
 }

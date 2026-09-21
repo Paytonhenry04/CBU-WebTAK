@@ -84,11 +84,27 @@ async function addCustomLayers() {
       minzoom: 15,
       paint: {
         "fill-extrusion-height": ["get", "render_height"],
+        // Progress colouring for filling in data/building_info.json:
+        //   black  = campus building with no name yet
+        //   red    = named, but still missing a description
+        //   yellow = name and description both done
+        // Buildings around campus that aren't in our data are drawn by the
+        // base map style in its own grey, and are left alone.
         "fill-extrusion-color": [
           "case",
-          ["!=", ["get", "name"], null],
+          [
+            "any",
+            ["==", ["get", "name"], null],
+            ["==", ["get", "name"], ""],
+          ],
+          "#111827",
+          [
+            "all",
+            ["!=", ["get", "description"], null],
+            ["!=", ["get", "description"], ""],
+          ],
           "#facc15",
-          "#64748b",
+          "#ef4444",
         ],
         "fill-extrusion-opacity": 0.85,
       },
@@ -445,9 +461,33 @@ async function pollAircraft() {
       if (ac) detailsBody.innerHTML = aircraftDetailsHTML(ac);
       else deselectAircraft(); // went stale / landed out of coverage
     }
-    statusEl.textContent = `${data.length} aircraft tracked - updated ${new Date().toLocaleTimeString()}`;
+    statusEl.textContent = `${data.length} aircraft via TAK - updated ${new Date().toLocaleTimeString()}`;
+    checkTakLink();
   } catch (err) {
     statusEl.textContent = `Connection issue: ${err.message}`;
+  }
+}
+
+// All aircraft data arrives as CoT from FreeTAKServer, so an empty map can
+// mean "no flights" or "the TAK feed is down" - say which.
+async function checkTakLink() {
+  try {
+    const res = await fetch("/api/health");
+    if (!res.ok) return;
+    const h = await res.json();
+    const age = h.seconds_since_last_cot;
+    const stale = age === null || age > 60;
+    if (!h.tak_connected) {
+      statusEl.textContent = "TAK link down - no CoT source";
+      statusEl.classList.add("warn");
+    } else if (stale && h.tracked_aircraft === 0) {
+      statusEl.textContent = "TAK connected - no CoT received (is adsb_tak.py running?)";
+      statusEl.classList.add("warn");
+    } else {
+      statusEl.classList.remove("warn");
+    }
+  } catch (err) {
+    /* status already reflects the fetch failure */
   }
 }
 
