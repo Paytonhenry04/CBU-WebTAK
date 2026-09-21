@@ -376,7 +376,12 @@ document.querySelectorAll("#focal-buttons button").forEach((btn) => {
 map.on("click", "cbu-buildings-fill", (e) => {
   const p = e.features[0].properties;
   const label = p.name || "Unnamed building";
-  const type = p.building && p.building !== "yes" ? p.building : p.amenity || "unknown";
+  // p.type comes from data/building_info.json when set; otherwise fall back
+  // to whatever OpenStreetMap's tags imply.
+  const type =
+    p.type ||
+    (p.building && p.building !== "yes" ? p.building : p.amenity) ||
+    "unknown";
 
   let html = `<strong>${label}</strong><br>Type: ${type}`;
   if (p.description) html += `<br>${p.description}`;

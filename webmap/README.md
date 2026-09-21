@@ -81,25 +81,41 @@ instance is occasionally slow/returns a transient 504 - just retry.
 ## Naming buildings / adding descriptions
 
 Only 76 of the 223 cached CBU building footprints have a `name` in
-OpenStreetMap, and OSM has no field for free-form descriptions. Both are
-filled in locally via `data/building_info.json`, keyed by OSM id:
+OpenStreetMap, and OSM has no field for free-form descriptions. All of it
+is controlled locally via `data/building_info.json`, keyed by OSM id:
 
 ```json
 {
   "233663002": {
     "name": "Engineering Building",
+    "type": "Academic",
     "description": "Houses the aviation program's flight simulators."
   }
 }
 ```
 
-Workflow: click a building on the map - the popup shows its `osm_id` -
-then add an entry for that id. Unnamed buildings render grey and named
-ones yellow, so the grey ones are the ones still to do.
+The file ships pre-populated with an entry for **every** building, filled
+in with whatever OSM already knows and a blank description to write
+yourself - named buildings first (alphabetically), then the 147 unnamed
+ones. Regenerate it with:
 
-Both fields are optional (`name` fills in or overrides the OSM name,
-`description` is additive). Keys starting with `_` are ignored, which is
-what the `_example` entry uses.
+```bash
+cd webmap/data && ../../venv/bin/python3 seed_building_info.py
+```
+
+That is safe to re-run: existing entries are preserved verbatim, so your
+edits are never overwritten; only buildings missing from the file are
+added. Run it again after re-fetching OSM data to pick up new footprints.
+
+Workflow: click a building on the map - the popup shows its `osm_id` -
+then edit that entry. Unnamed buildings render grey and named ones
+yellow, so the grey ones are what's left to do.
+
+All three fields are optional and apply to named and unnamed buildings
+alike. A **blank field means "leave whatever OpenStreetMap had"**, not
+"blank it out" - so you can add a `description` to an already-named
+building without having to retype its name. Keys starting with `_` are
+ignored, which is what the `_example` entry uses.
 
 The merge happens in the backend's `/api/buildings` endpoint, which
 re-reads both files per request - so **edits take effect on a page reload**,

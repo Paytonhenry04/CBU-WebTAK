@@ -1,6 +1,1122 @@
 {
   "_example": {
     "name": "Example Hall",
-    "description": "Delete this entry. Add one entry per building, keyed by the osm_id shown in that building's popup on the map. Both fields are optional: 'name' overrides (or fills in) the OpenStreetMap name, 'description' adds text OSM has no field for. Keys starting with _ are ignored."
+    "type": "Classroom",
+    "description": "Delete this entry. Each real entry is keyed by the osm_id shown in that building's popup on the map. All three fields are optional - a blank one just leaves whatever OpenStreetMap had. Keys starting with _ are ignored."
+  },
+  "234178045": {
+    "name": "Annie Gabriel Library",
+    "type": "",
+    "description": ""
+  },
+  "8589348": {
+    "name": "Aquatic Center",
+    "type": "",
+    "description": ""
+  },
+  "8589347": {
+    "name": "Athletic Training",
+    "type": "",
+    "description": ""
+  },
+  "233663000": {
+    "name": "Baker's",
+    "type": "Fast food",
+    "description": ""
+  },
+  "233662998": {
+    "name": "Bourns Engineering Lab",
+    "type": "",
+    "description": ""
+  },
+  "619322276": {
+    "name": "Business Building",
+    "type": "",
+    "description": ""
+  },
+  "234178044": {
+    "name": "Central Plant",
+    "type": "",
+    "description": ""
+  },
+  "954138793": {
+    "name": "Ceramics",
+    "type": "University",
+    "description": ""
+  },
+  "619322274": {
+    "name": "College of Engineering",
+    "type": "",
+    "description": ""
+  },
+  "233663658": {
+    "name": "College Park Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "233663659": {
+    "name": "College Park Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "233663660": {
+    "name": "College Park Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "233663661": {
+    "name": "College Park Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "233662993": {
+    "name": "Engineering Building",
+    "type": "",
+    "description": ""
+  },
+  "609631909": {
+    "name": "Events Center",
+    "type": "",
+    "description": ""
+  },
+  "234178055": {
+    "name": "Facilities & Planning Services",
+    "type": "",
+    "description": ""
+  },
+  "609836056": {
+    "name": "Food Mart",
+    "type": "",
+    "description": ""
+  },
+  "234178042": {
+    "name": "Hawkins Music Building",
+    "type": "",
+    "description": ""
+  },
+  "619322270": {
+    "name": "Hawthorne House",
+    "type": "House",
+    "description": ""
+  },
+  "234178047": {
+    "name": "James Building (North) 2-Story",
+    "type": "University",
+    "description": ""
+  },
+  "8589349": {
+    "name": "Lambeth / Nursing Annex",
+    "type": "",
+    "description": ""
+  },
+  "234178051": {
+    "name": "Lancer Arms Apartments",
+    "type": "",
+    "description": ""
+  },
+  "234178052": {
+    "name": "Lancer Arms Apartments",
+    "type": "",
+    "description": ""
+  },
+  "234178053": {
+    "name": "Lancer Arms Apartments",
+    "type": "",
+    "description": ""
+  },
+  "234178050": {
+    "name": "Lancer Arms North Offices",
+    "type": "",
+    "description": ""
+  },
+  "233663041": {
+    "name": "Lancer Palms",
+    "type": "University",
+    "description": ""
+  },
+  "233663010": {
+    "name": "Mail & Shipping Services",
+    "type": "",
+    "description": ""
+  },
+  "234178054": {
+    "name": "Mission Hall",
+    "type": "",
+    "description": ""
+  },
+  "234178063": {
+    "name": "Multi-Purpose Class Room",
+    "type": "",
+    "description": ""
+  },
+  "346122018": {
+    "name": "Recreation Center",
+    "type": "",
+    "description": ""
+  },
+  "609836055": {
+    "name": "Shell",
+    "type": "Roof",
+    "description": ""
+  },
+  "234178040": {
+    "name": "Simmons Hall",
+    "type": "College",
+    "description": ""
+  },
+  "234178041": {
+    "name": "Smith Hall",
+    "type": "College",
+    "description": ""
+  },
+  "954127145": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127146": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127147": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127148": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127149": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127150": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127151": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127152": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127153": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127154": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127155": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127156": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127157": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127158": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127159": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127160": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127161": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954127162": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954138788": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954138789": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954138790": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "954138791": {
+    "name": "The Cottages",
+    "type": "Residential",
+    "description": ""
+  },
+  "238218625": {
+    "name": "Tower Hall",
+    "type": "Residential",
+    "description": ""
+  },
+  "954468680": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468681": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468682": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468683": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468684": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468685": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468686": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468687": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468688": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468689": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468690": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468691": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468692": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468693": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468694": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468695": {
+    "name": "University Place Apartments",
+    "type": "Apartments",
+    "description": ""
+  },
+  "954468696": {
+    "name": "University Place Apartments",
+    "type": "Residential",
+    "description": ""
+  },
+  "234178049": {
+    "name": "Van Dyne Gym",
+    "type": "",
+    "description": ""
+  },
+  "234178043": {
+    "name": "Wallace Theatre",
+    "type": "",
+    "description": ""
+  },
+  "619322267": {
+    "name": "Wellness Center",
+    "type": "",
+    "description": ""
+  },
+  "233663002": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "233663004": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "233663007": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "233663014": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "233663016": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "233663019": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "233663021": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "233663023": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "233663024": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "233663026": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "234178046": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "234178048": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "234178061": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "234178062": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "238218610": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "238218611": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "238218613": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "238218615": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "238218618": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "238218622": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "238218626": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "893815175": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815176": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815177": {
+    "name": "",
+    "type": "Garage",
+    "description": ""
+  },
+  "893815178": {
+    "name": "",
+    "type": "Garage",
+    "description": ""
+  },
+  "893815179": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815180": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815181": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815182": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815183": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815184": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815185": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815186": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815187": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815188": {
+    "name": "",
+    "type": "Garage",
+    "description": ""
+  },
+  "893815189": {
+    "name": "",
+    "type": "Garage",
+    "description": ""
+  },
+  "893815190": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "893815191": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815192": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815193": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815194": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815195": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "893815196": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "957964625": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957964626": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957964627": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957964628": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957964629": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957964630": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957965882": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957965883": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957965884": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957965885": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957965886": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957965887": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957965888": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957965889": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957966480": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957966481": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957966482": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957966483": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957966484": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957966485": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957966781": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957966782": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957966783": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957966784": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957966785": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957966786": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957966787": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957966788": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957967218": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957967219": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957967220": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957967221": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957967222": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957972428": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957972429": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957972430": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957975126": {
+    "name": "",
+    "type": "Apartments",
+    "description": ""
+  },
+  "957975127": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957975128": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957975983": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957975984": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957975985": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "957975986": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "958250298": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958250299": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958250300": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958250301": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958250302": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958289334": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "958289335": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "958297614": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958297615": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958297616": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958297617": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958297618": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958297619": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958297869": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958297870": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958297871": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958297872": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958297873": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958297874": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958297875": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958297876": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958297877": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958297878": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958297879": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958297880": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958297881": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958297882": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958297883": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958297884": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958297885": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958298163": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958298164": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958304244": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958304245": {
+    "name": "",
+    "type": "Retail",
+    "description": ""
+  },
+  "958304246": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958304247": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958304248": {
+    "name": "",
+    "type": "",
+    "description": ""
+  },
+  "958305759": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958305760": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958305761": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958305762": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958305763": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958306018": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958306019": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958306020": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958306539": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958306540": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958306541": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958306542": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958971557": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958971558": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958971559": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958971560": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958971561": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958971562": {
+    "name": "",
+    "type": "Residential",
+    "description": ""
+  },
+  "958971565": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958971751": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "958971752": {
+    "name": "",
+    "type": "University",
+    "description": ""
+  },
+  "959571395": {
+    "name": "",
+    "type": "House",
+    "description": ""
+  },
+  "1012294897": {
+    "name": "",
+    "type": "Parking",
+    "description": ""
+  },
+  "1012294900": {
+    "name": "",
+    "type": "",
+    "description": ""
   }
 }
