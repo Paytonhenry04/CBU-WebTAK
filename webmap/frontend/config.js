@@ -4,7 +4,18 @@
 //   KRAL airport -> way 127837011, centroid 33.9510105, -117.4405868
 
 const CONFIG = {
-  POLL_MS: 5000,
+  POLL_MS: 2000,
+
+  MODEL_3D: {
+    // Below this zoom the flat icon is used instead - a to-scale aircraft
+    // is sub-pixel when zoomed out, so 3D only earns its keep up close.
+    MIN_ZOOM: 12.5,
+    // A Cessna/Piper is ~8m long, which is invisible at map scale, so the
+    // model is deliberately exaggerated. Tune this if planes look wrong.
+    LENGTH_METERS: 120,
+    // Flip if the nose ends up pointing the wrong way along the track.
+    HEADING_OFFSET_DEG: 0,
+  },
 
   FOCAL_POINTS: {
     overview: {

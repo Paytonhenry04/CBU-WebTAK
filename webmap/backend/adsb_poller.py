@@ -40,6 +40,11 @@ MAX_TRACK_POINTS = 5000
 TRACK_FILE = Path(__file__).resolve().parent.parent / "track_history.json"
 TRACK_RETENTION_HOURS = 12
 
+# Deliberately separate from adsb_tak.POLL_SECONDS: the web map wants
+# smoother movement than the CoT feeder needs, and changing the shared
+# constant would alter what adsb_tak.py sends to FreeTAKServer too.
+POLL_SECONDS = 5
+
 
 def _to_state(ac: dict) -> dict | None:
     reg = ac.get("r", "UNKNOWN")
@@ -161,7 +166,7 @@ async def run_forever() -> None:
                 logger.info("Polled %d CBU aircraft", len(hits))
             except Exception as exc:  # noqa: BLE001 - keep polling regardless
                 logger.warning("adsb.fi poll failed: %s", exc)
-            await asyncio.sleep(adsb_tak.POLL_SECONDS)
+            await asyncio.sleep(POLL_SECONDS)
 
 
 def prune_stale() -> None:
