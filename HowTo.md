@@ -38,6 +38,28 @@ nohup ../../venv/bin/uvicorn app:app --host 0.0.0.0 --port 8090 > ../webmap.log 
 disown
 ```
 
+## Adding building names / descriptions
+
+Most CBU buildings have no name in OpenStreetMap. To fill them in:
+
+1. Click a building on the map - the popup shows its `osm_id`.
+2. Add an entry to `webmap/data/building_info.json`:
+
+```json
+{
+  "233663002": {
+    "name": "Engineering Building",
+    "description": "Whatever you want shown in the popup."
+  }
+}
+```
+
+3. Reload the page. That's it - no restart, no re-fetching OSM data.
+
+Grey buildings are unnamed, yellow ones are named, so the grey ones are
+what's left to do. A JSON typo won't break the map, it just gets ignored
+(check `webmap.log` if an entry doesn't show up).
+
 ## Checking things are running
 
 ```bash

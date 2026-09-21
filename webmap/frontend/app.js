@@ -377,9 +377,17 @@ map.on("click", "cbu-buildings-fill", (e) => {
   const p = e.features[0].properties;
   const label = p.name || "Unnamed building";
   const type = p.building && p.building !== "yes" ? p.building : p.amenity || "unknown";
+
+  let html = `<strong>${label}</strong><br>Type: ${type}`;
+  if (p.description) html += `<br>${p.description}`;
+  // osm_id is shown so it can be pasted into data/building_info.json to
+  // give this building a name/description.
+  html +=
+    `<br><span class="osm-id">osm_id: <code>${p.osm_id}</code></span>`;
+
   new maplibregl.Popup()
     .setLngLat(e.lngLat)
-    .setHTML(`<strong>${label}</strong><br>Type: ${type}<br><em>Source: OpenStreetMap</em>`)
+    .setHTML(html)
     .addTo(map);
 });
 

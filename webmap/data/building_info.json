@@ -1,0 +1,6 @@
+{
+  "_example": {
+    "name": "Example Hall",
+    "description": "Delete this entry. Add one entry per building, keyed by the osm_id shown in that building's popup on the map. Both fields are optional: 'name' overrides (or fills in) the OpenStreetMap name, 'description' adds text OSM has no field for. Keys starting with _ are ignored."
+  }
+}

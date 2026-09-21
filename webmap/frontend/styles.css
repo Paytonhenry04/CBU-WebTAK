@@ -104,3 +104,12 @@ html, body, #map {
   font-size: 13px;
   line-height: 1.5;
 }
+
+.osm-id {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.osm-id code {
+  user-select: all;
+}
