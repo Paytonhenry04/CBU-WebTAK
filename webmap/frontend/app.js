@@ -25,32 +25,25 @@ function circlePolygon(centerLonLat, radiusMeters, points = 64) {
   };
 }
 
-// Loads the plane icon the way MapLibre's own docs recommend (map.loadImage
-// with a data URI), rather than passing a canvas ImageData object directly -
-// more broadly compatible, and lets us confirm load success/failure.
-function loadPlaneIcon() {
-  return new Promise((resolve) => {
-    if (map.hasImage("plane-icon")) {
-      resolve();
-      return;
+// Loads the plane icon via map.loadImage(). MapLibre GL JS v4's loadImage()
+// is Promise-based (single arg, resolves to either the image directly or
+// {data: image} depending on version) - NOT the old (url, callback) form.
+async function loadPlaneIcon() {
+  if (map.hasImage("plane-icon")) return;
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">' +
+    '<polygon points="24,4 40,42 24,32 8,42" fill="#38bdf8" stroke="#0f172a" stroke-width="2"/>' +
+    "</svg>";
+  const url = "data:image/svg+xml;base64," + btoa(svg);
+  try {
+    const result = await map.loadImage(url);
+    const image = result && result.data ? result.data : result;
+    if (!map.hasImage("plane-icon")) {
+      map.addImage("plane-icon", image);
     }
-    const svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">' +
-      '<polygon points="24,4 40,42 24,32 8,42" fill="#38bdf8" stroke="#0f172a" stroke-width="2"/>' +
-      "</svg>";
-    const url = "data:image/svg+xml;base64," + btoa(svg);
-    map.loadImage(url, (error, image) => {
-      if (error) {
-        console.error("Failed to load plane icon:", error);
-        resolve();
-        return;
-      }
-      if (!map.hasImage("plane-icon")) {
-        map.addImage("plane-icon", image);
-      }
-      resolve();
-    });
-  });
+  } catch (error) {
+    console.error("Failed to load plane icon:", error);
+  }
 }
 
 function satelliteStyle() {
