@@ -1,78 +1,34 @@
 // CBU/KRAL live webmap - main app logic
 
-function circlePolygon(centerLonLat, radiusMeters, points = 64) {
-  const [lon, lat] = centerLonLat;
-  const earthRadius = 6371000;
-  const coords = [];
-  for (let i = 0; i <= points; i++) {
-    const angle = (i / points) * 2 * Math.PI;
-    const dx = radiusMeters * Math.cos(angle);
-    const dy = radiusMeters * Math.sin(angle);
-    const dLat = (dy / earthRadius) * (180 / Math.PI);
-    const dLon =
-      (dx / (earthRadius * Math.cos((lat * Math.PI) / 180))) * (180 / Math.PI);
-    coords.push([lon + dLon, lat + dLat]);
-  }
-  return {
-    type: "FeatureCollection",
-    features: [
-      {
-        type: "Feature",
-        properties: { name: "CBU Campus geofence" },
-        geometry: { type: "Polygon", coordinates: [coords] },
-      },
-    ],
-  };
-}
+// A real aircraft silhouette (fuselage, swept wings, tailplane), drawn
+// nose-up so MapLibre's icon-rotate can point it along the heading.
+const PLANE_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">' +
+  '<path d="M32 4 C34.2 4 35.8 7.2 35.8 11.4 L35.8 23.6 L58 36.4 L58 41.6 ' +
+  "L35.8 35.4 L35.8 47.6 L42.4 52.6 L42.4 56.4 L32 53.6 L21.6 56.4 " +
+  'L21.6 52.6 L28.2 47.6 L28.2 35.4 L6 41.6 L6 36.4 L28.2 23.6 ' +
+  'L28.2 11.4 C28.2 7.2 29.8 4 32 4 Z" ' +
+  'fill="#38bdf8" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round"/>' +
+  "</svg>";
 
-// Loads the plane icon via a plain DOM Image element instead of MapLibre's
-// own loadImage() pipeline (which has tripped up twice now on this
-// project - wrong callback signature, then an unconfirmed resolve shape).
-// new Image() + onload + addImage() is the simplest, most broadly-supported
-// path and doesn't depend on MapLibre's internal request/decode handling.
 function loadPlaneIcon() {
   return new Promise((resolve) => {
     if (map.hasImage("plane-icon")) {
       resolve();
       return;
     }
-    const svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">' +
-      '<polygon points="24,4 40,42 24,32 8,42" fill="#38bdf8" stroke="#0f172a" stroke-width="2"/>' +
-      "</svg>";
     const img = new Image();
     img.onload = () => {
-      if (!map.hasImage("plane-icon")) {
-        map.addImage("plane-icon", img);
-      }
+      if (!map.hasImage("plane-icon")) map.addImage("plane-icon", img);
       resolve();
     };
     img.onerror = (err) => {
       console.error("Failed to load plane icon:", err);
       resolve();
     };
-    img.src = "data:image/svg+xml;base64," + btoa(svg);
+    img.src = "data:image/svg+xml;base64," + btoa(PLANE_SVG);
   });
 }
-
-function satelliteStyle() {
-  // No `glyphs` URL here on purpose - the one previously used 404'd, and
-  // since our own layers no longer use text-field, nothing needs it.
-  return {
-    version: 8,
-    sources: {
-      esri: {
-        type: "raster",
-        tiles: [CONFIG.TILES.SATELLITE_TILE_URL],
-        tileSize: 256,
-        attribution: CONFIG.TILES.SATELLITE_ATTRIBUTION,
-      },
-    },
-    layers: [{ id: "esri-satellite", type: "raster", source: "esri" }],
-  };
-}
-
-let usingSatellite = false;
 
 const map = new maplibregl.Map({
   container: "map",
@@ -84,10 +40,33 @@ const map = new maplibregl.Map({
   attributionControl: true,
 });
 
-map.addControl(new maplibregl.NavigationControl(), "top-right");
+map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
 
 async function addCustomLayers() {
   await loadPlaneIcon();
+
+  // Real CBU campus outline (OSM amenity=university multipolygon), not a
+  // synthetic circle - the campus is several separate parcels.
+  if (!map.getSource("cbu-campus")) {
+    map.addSource("cbu-campus", {
+      type: "geojson",
+      data: CONFIG.GEO_DATA.CBU_CAMPUS,
+    });
+  }
+  if (!map.getLayer("cbu-campus-fill")) {
+    map.addLayer({
+      id: "cbu-campus-fill",
+      type: "fill",
+      source: "cbu-campus",
+      paint: { "fill-color": "#facc15", "fill-opacity": 0.1 },
+    });
+    map.addLayer({
+      id: "cbu-campus-line",
+      type: "line",
+      source: "cbu-campus",
+      paint: { "line-color": "#facc15", "line-width": 3 },
+    });
+  }
 
   // CBU buildings: fill-extrusion, only rendered/clickable once zoomed
   // into the campus focal point (minzoom gate does this implicitly).
@@ -116,31 +95,6 @@ async function addCustomLayers() {
     });
   }
 
-  // CBU geofence circle - always visible, marks the campus as a focal point.
-  if (!map.getSource("cbu-geofence")) {
-    map.addSource("cbu-geofence", {
-      type: "geojson",
-      data: circlePolygon(
-        CONFIG.CBU_GEOFENCE_CENTER,
-        CONFIG.CBU_GEOFENCE_RADIUS_M
-      ),
-    });
-  }
-  if (!map.getLayer("cbu-geofence-line")) {
-    map.addLayer({
-      id: "cbu-geofence-line",
-      type: "line",
-      source: "cbu-geofence",
-      paint: { "line-color": "#facc15", "line-width": 3 },
-    });
-    map.addLayer({
-      id: "cbu-geofence-fill",
-      type: "fill",
-      source: "cbu-geofence",
-      paint: { "fill-color": "#facc15", "fill-opacity": 0.06 },
-    });
-  }
-
   // KRAL airport boundary - always visible geofence.
   if (!map.getSource("kral-airport")) {
     map.addSource("kral-airport", {
@@ -150,21 +104,20 @@ async function addCustomLayers() {
   }
   if (!map.getLayer("kral-outline")) {
     map.addLayer({
+      id: "kral-fill",
+      type: "fill",
+      source: "kral-airport",
+      paint: { "fill-color": "#f87171", "fill-opacity": 0.08 },
+    });
+    map.addLayer({
       id: "kral-outline",
       type: "line",
       source: "kral-airport",
       paint: { "line-color": "#f87171", "line-width": 3 },
     });
-    map.addLayer({
-      id: "kral-fill",
-      type: "fill",
-      source: "kral-airport",
-      paint: { "fill-color": "#f87171", "fill-opacity": 0.06 },
-    });
   }
 
-  // Flight trail for whichever aircraft is currently selected (since
-  // takeoff, per adsb_poller.py's ground/airborne transition tracking).
+  // Flight trail for whichever aircraft is currently selected.
   if (!map.getSource("aircraft-track")) {
     map.addSource("aircraft-track", {
       type: "geojson",
@@ -177,7 +130,7 @@ async function addCustomLayers() {
       type: "line",
       source: "aircraft-track",
       layout: { "line-join": "round", "line-cap": "round" },
-      paint: { "line-color": "#22c55e", "line-width": 2.5, "line-opacity": 0.9 },
+      paint: { "line-color": "#22c55e", "line-width": 3, "line-opacity": 0.9 },
     });
   }
 
@@ -188,26 +141,24 @@ async function addCustomLayers() {
       data: { type: "FeatureCollection", features: [] },
     });
   }
-  // Guaranteed-visible fallback marker, always drawn under the plane icon -
-  // if the custom icon image ever fails to load, position is still visible.
+  // Guaranteed-visible fallback marker under the icon - if the icon image
+  // ever fails to load, aircraft position is still visible.
   if (!map.getLayer("aircraft-dot")) {
     map.addLayer({
       id: "aircraft-dot",
       type: "circle",
       source: "aircraft",
       paint: {
-        "circle-radius": 6,
+        "circle-radius": 4,
         "circle-color": "#38bdf8",
         "circle-stroke-color": "#0f172a",
-        "circle-stroke-width": 1.5,
+        "circle-stroke-width": 1,
       },
     });
   }
-  // No text-field/glyphs here on purpose - callsign is already shown in the
-  // popup and the Active Flights list, and a broken glyphs URL (which
-  // happened on the satellite style) can take a whole symbol layer's
-  // rendering down with it, including the icon. Keeping this icon-only
-  // avoids that entire class of failure.
+  // No text-field/glyphs here on purpose - callsign is shown in the popup
+  // and the Active Flights list, and a broken glyphs URL can take a whole
+  // symbol layer's rendering down with it, icon included.
   if (!map.getLayer("aircraft-symbol")) {
     map.addLayer({
       id: "aircraft-symbol",
@@ -218,7 +169,7 @@ async function addCustomLayers() {
         "icon-rotate": ["get", "heading"],
         "icon-rotation-alignment": "map",
         "icon-allow-overlap": true,
-        "icon-size": 0.8,
+        "icon-size": 0.55,
       },
     });
   }
@@ -226,14 +177,44 @@ async function addCustomLayers() {
 
 map.on("load", addCustomLayers);
 
-// --- Basemap toggle ---
-document.getElementById("toggle-basemap").addEventListener("click", () => {
-  usingSatellite = !usingSatellite;
-  document.getElementById("toggle-basemap").textContent = usingSatellite
-    ? "Switch to Street Map"
-    : "Switch to Satellite";
-  map.once("style.load", addCustomLayers);
-  map.setStyle(usingSatellite ? satelliteStyle() : CONFIG.TILES.STREET_STYLE_URL);
+// --- Middle-mouse drag to tilt (pitch) the camera, for the 3D buildings ---
+// Hold the middle mouse button and drag up/down. Drag left/right at the same
+// time to rotate. MapLibre only binds right-click/ctrl+drag for this natively.
+let pitchDragging = false;
+let pitchLastY = 0;
+let pitchLastX = 0;
+
+const mapCanvas = map.getCanvasContainer();
+
+mapCanvas.addEventListener("mousedown", (e) => {
+  if (e.button !== 1) return;
+  e.preventDefault(); // stop the browser's middle-click autoscroll
+  pitchDragging = true;
+  pitchLastY = e.clientY;
+  pitchLastX = e.clientX;
+  mapCanvas.style.cursor = "ns-resize";
+});
+
+window.addEventListener("mousemove", (e) => {
+  if (!pitchDragging) return;
+  const dy = e.clientY - pitchLastY;
+  const dx = e.clientX - pitchLastX;
+  pitchLastY = e.clientY;
+  pitchLastX = e.clientX;
+  // Drag up => tilt toward the horizon, drag down => back to top-down.
+  map.setPitch(Math.min(85, Math.max(0, map.getPitch() - dy * 0.4)));
+  if (Math.abs(dx) > 0) map.setBearing(map.getBearing() + dx * 0.3);
+});
+
+window.addEventListener("mouseup", (e) => {
+  if (e.button !== 1 || !pitchDragging) return;
+  pitchDragging = false;
+  mapCanvas.style.cursor = "";
+});
+
+// Chrome shows the autoscroll widget on middle-click unless this is killed.
+mapCanvas.addEventListener("auxclick", (e) => {
+  if (e.button === 1) e.preventDefault();
 });
 
 // --- Focal point buttons ---
@@ -280,7 +261,7 @@ function aircraftPopupHTML(p) {
   );
 }
 
-// Fetches and renders the selected aircraft's flight trail since takeoff.
+// Fetches and renders the selected aircraft's flight trail.
 async function showTrack(reg) {
   try {
     const res = await fetch(`/api/aircraft/${encodeURIComponent(reg)}/track`);
@@ -419,6 +400,8 @@ async function pollAircraft() {
     const src = map.getSource("aircraft");
     if (src) src.setData(fc);
     renderAircraftList(data);
+    // Keep the selected aircraft's trail growing as it flies.
+    if (selectedReg) showTrack(selectedReg);
     statusEl.textContent = `${data.length} aircraft tracked - updated ${new Date().toLocaleTimeString()}`;
   } catch (err) {
     statusEl.textContent = `Connection issue: ${err.message}`;

@@ -78,6 +78,23 @@ runtime hits Overpass. Re-run `fetch_osm_data.py` manually if the campus
 adds buildings or the cached data otherwise goes stale. The Overpass public
 instance is occasionally slow/returns a transient 504 - just retry.
 
+## Flight trails
+
+`adsb_poller.py` keeps a per-registration position trail and serves it at
+`GET /api/aircraft/{reg}/track`. While an aircraft is on the ground only its
+latest fix is kept; the moment it lifts off that fix is retained as the
+trail's origin, so the line starts at the runway rather than at the first
+airborne fix. Touch-and-go circuits (common for these training aircraft)
+briefly register as on-ground, so each circuit starts a fresh trail.
+
+Trails are persisted to `webmap/track_history.json` (gitignored, atomic
+write) and restored on startup, so restarting the backend no longer wipes a
+flight's history mid-flight. This matters because **there is no free
+historical-trace API to rebuild it from** - adsb.fi's `globe_history` traces
+are behind a Cloudflare challenge and adsb.lol doesn't serve traces - so any
+point not captured live is gone for good. A flight that was already airborne
+before the poller ever saw it can't be back-filled to its real takeoff.
+
 ## Known limitations
 
 - Aircraft "departure/arrival airport" and "pilot" are not available from
@@ -86,5 +103,8 @@ instance is occasionally slow/returns a transient 504 - just retry.
 - Building info popups only have what OpenStreetMap tags provide (name +
   building/amenity type) - most of the 223 cached CBU building footprints
   have no `name` tag and show as "Unnamed building".
+- The campus outline is OSM relation 13218766 (`amenity=university`), a
+  6-parcel multipolygon - not a hand-drawn boundary, so it reflects
+  whatever OSM contributors have mapped.
 - Port 8090 must be UPnP-forwarded (same as 8087/5000/19023) for this to be
   reachable outside the home LAN - see PROJECT_STATUS.md for the pattern.
