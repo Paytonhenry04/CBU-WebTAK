@@ -30,6 +30,107 @@ function loadPlaneIcon() {
   });
 }
 
+// --- 3D aircraft models (three.js in a MapLibre custom layer) ---
+// The mesh is built procedurally rather than loading a glTF asset: no
+// external file to 404 or license, and this project has been bitten
+// repeatedly by third-party asset/endpoint failures.
+function buildPlaneMesh() {
+  const group = new THREE.Group();
+  const body = new THREE.MeshLambertMaterial({ color: 0x38bdf8 });
+  const trim = new THREE.MeshLambertMaterial({ color: 0x0f172a });
+
+  // Model is built nose-toward -Z, Y up, roughly 10 units long, then
+  // scaled to CONFIG.MODEL_3D.LENGTH_METERS at render time.
+  const fuselage = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.5, 9, 12), body);
+  fuselage.rotation.x = Math.PI / 2;
+  group.add(fuselage);
+
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.7, 2, 12), body);
+  nose.rotation.x = -Math.PI / 2;
+  nose.position.z = -5.5;
+  group.add(nose);
+
+  const wings = new THREE.Mesh(new THREE.BoxGeometry(13, 0.25, 2.2), body);
+  wings.position.z = -0.5;
+  group.add(wings);
+
+  const tailplane = new THREE.Mesh(new THREE.BoxGeometry(5, 0.22, 1.2), trim);
+  tailplane.position.z = 4;
+  group.add(tailplane);
+
+  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.22, 2.2, 1.6), trim);
+  fin.position.set(0, 1, 4.2);
+  group.add(fin);
+
+  return group;
+}
+
+const planes3D = {
+  id: "aircraft-3d",
+  type: "custom",
+  renderingMode: "3d",
+
+  onAdd(_map, gl) {
+    this.camera = new THREE.Camera();
+    this.scene = new THREE.Scene();
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    const sun = new THREE.DirectionalLight(0xffffff, 0.9);
+    sun.position.set(0, 80, 100).normalize();
+    this.scene.add(sun);
+
+    this.plane = buildPlaneMesh();
+    this.scene.add(this.plane);
+
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: _map.getCanvas(),
+      context: gl,
+      antialias: true,
+    });
+    this.renderer.autoClear = false;
+  },
+
+  render(gl, matrix) {
+    if (!use3DModels || map.getZoom() < CONFIG.MODEL_3D.MIN_ZOOM) return;
+    if (!latestAircraft.length) return;
+
+    const base = new THREE.Matrix4().fromArray(matrix);
+    // Converts the model's Y-up space into the map's Z-up mercator space.
+    const uprightRot = new THREE.Matrix4().makeRotationAxis(
+      new THREE.Vector3(1, 0, 0),
+      Math.PI / 2
+    );
+
+    for (const ac of latestAircraft) {
+      const altMeters = (ac.alt_ft || 0) * 0.3048;
+      const mc = maplibregl.MercatorCoordinate.fromLngLat(
+        [ac.lon, ac.lat],
+        altMeters
+      );
+      const unit = mc.meterInMercatorCoordinateUnits();
+      // Model is ~10 units long, so scale so it spans LENGTH_METERS.
+      const scale = unit * (CONFIG.MODEL_3D.LENGTH_METERS / 10);
+
+      const heading = ((ac.heading || 0) + CONFIG.MODEL_3D.HEADING_OFFSET_DEG) *
+        (Math.PI / 180);
+      // Rotating about the model's own up axis once it's upright.
+      this.plane.rotation.set(0, -heading, 0);
+
+      const model = new THREE.Matrix4()
+        .makeTranslation(mc.x, mc.y, mc.z)
+        .scale(new THREE.Vector3(scale, -scale, scale))
+        .multiply(uprightRot);
+
+      // clone() per aircraft: multiply() mutates in place.
+      this.camera.projectionMatrix = base.clone().multiply(model);
+      this.renderer.resetState();
+      this.renderer.render(this.scene, this.camera);
+    }
+    map.triggerRepaint();
+  },
+};
+
+let use3DModels = true;
+
 const map = new maplibregl.Map({
   container: "map",
   style: CONFIG.TILES.STREET_STYLE_URL,
@@ -173,9 +274,45 @@ async function addCustomLayers() {
       },
     });
   }
+
+  // 3D models last, on top. Guarded: if three.js failed to load from the
+  // CDN, the rest of the map must still work.
+  if (!map.getLayer("aircraft-3d")) {
+    try {
+      if (typeof THREE === "undefined") throw new Error("three.js not loaded");
+      map.addLayer(planes3D);
+    } catch (err) {
+      console.error("3D aircraft models unavailable, using flat icons:", err);
+      use3DModels = false;
+    }
+  }
+
+  updateAircraftRendering();
+}
+
+// The flat icon and the 3D model would otherwise draw on top of each other,
+// so only one is shown at a time depending on zoom and the toggle.
+function updateAircraftRendering() {
+  if (!map.getLayer("aircraft-symbol")) return;
+  const showModels =
+    use3DModels &&
+    map.getZoom() >= CONFIG.MODEL_3D.MIN_ZOOM &&
+    map.getLayer("aircraft-3d");
+  map.setLayoutProperty(
+    "aircraft-symbol",
+    "visibility",
+    showModels ? "none" : "visible"
+  );
 }
 
 map.on("load", addCustomLayers);
+map.on("zoomend", updateAircraftRendering);
+
+document.getElementById("use-3d-models").addEventListener("change", (e) => {
+  use3DModels = e.target.checked;
+  updateAircraftRendering();
+  map.triggerRepaint();
+});
 
 // --- Middle-mouse drag to tilt (pitch) the camera, for the 3D buildings ---
 // Hold the middle mouse button and drag up/down. Drag left/right at the same
