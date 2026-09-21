@@ -46,6 +46,40 @@ html, body, #map {
   border-color: #3b82f6;
 }
 
+#aircraft-list-wrap {
+  border-top: 1px solid #334155;
+  padding-top: 6px;
+}
+
+#aircraft-list-heading {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 4px;
+}
+
+#aircraft-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.aircraft-row {
+  background: #0f172a;
+  color: #eee;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.aircraft-row:hover {
+  background: #1e293b;
+}
+
 #status {
   font-size: 11px;
   color: #9ca3af;
