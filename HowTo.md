@@ -20,17 +20,32 @@ cd ~/TAK
 sudo ./deploy/install.sh
 ```
 
-Then you never start anything by hand again. Day-to-day:
+### One command on/off
 
 ```bash
-systemctl status cbu-adsb-tak cbu-webmap   # is it healthy?
-journalctl -u cbu-adsb-tak -f              # watch the CoT feeder
-journalctl -u cbu-webmap -f                # watch the web map
-systemctl restart cbu-webmap               # restart one service
+sudo systemctl start cbu-tak.target    # FTS + CoT feeder + web map, all on
+sudo systemctl stop  cbu-tak.target    # all off
+systemctl status cbu-tak.target        # overview
 ```
 
-FreeTAKServer runs under Docker and now has `restart: unless-stopped`, so
-it comes back on boot too.
+`cbu-tak.target` groups the three services. Stopping it stops all of them
+(each declares `PartOf=`, which is what makes stop propagate - `Wants=`
+alone only works on start).
+
+### Day to day
+
+```bash
+journalctl -u cbu-adsb-tak -f          # watch the CoT feeder
+journalctl -u cbu-webmap -f            # watch the web map
+sudo systemctl restart cbu-adsb-tak    # after editing CBU_TAILS
+sudo systemctl restart cbu-webmap      # after editing backend code
+```
+
+Stopping the target runs `docker-compose stop`, not `down` - the
+containers are kept rather than recreated, which avoids the
+docker-compose v1 `KeyError: 'ContainerConfig'` bug this project has hit
+repeatedly. The FTS database and credentials live in named volumes and
+are not affected either way.
 
 Why this matters: `adsb_tak.py` has no internal reconnect and exits when
 FreeTAKServer restarts. Since the web map's only data source is CoT from

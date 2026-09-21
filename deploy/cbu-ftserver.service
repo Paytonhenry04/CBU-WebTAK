@@ -1,0 +1,29 @@
+[Unit]
+Description=FreeTAKServer stack (Docker Compose)
+Documentation=https://github.com/Paytonhenry04/CBU-WebTAK
+After=network-online.target docker.service
+Requires=docker.service
+Wants=network-online.target
+PartOf=cbu-tak.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/payton/TAK/ftserver
+
+# 'up -d' creates the containers if they don't exist and starts them if they
+# do. Note: if compose.yaml has changed, this recreates them, which on
+# docker-compose v1 can hit the known "KeyError: 'ContainerConfig'" bug - the
+# workaround is 'docker-compose stop && docker-compose rm -f <svc>' then start
+# again. See webmap/README.md.
+ExecStart=/usr/bin/docker-compose -f compose.yaml up -d
+
+# 'stop', deliberately not 'down': stopping leaves the containers in place so
+# restarting doesn't recreate them (see the bug above). Named volumes hold the
+# FTS database and credentials and are untouched either way.
+ExecStop=/usr/bin/docker-compose -f compose.yaml stop
+
+TimeoutStartSec=180
+
+[Install]
+WantedBy=cbu-tak.target

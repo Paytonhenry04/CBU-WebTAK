@@ -3,8 +3,10 @@ Description=CBU ADS-B to TAK feeder (publishes aircraft CoT to FreeTAKServer)
 Documentation=https://github.com/Paytonhenry04/CBU-WebTAK
 # FTS runs in Docker; this retries on its own if the server isn't up yet,
 # so this is ordering only, not a hard requirement.
-After=network-online.target docker.service
+After=network-online.target docker.service cbu-ftserver.service
 Wants=network-online.target
+# PartOf makes 'systemctl stop cbu-tak.target' stop this too.
+PartOf=cbu-tak.target
 
 [Service]
 Type=simple
@@ -25,4 +27,4 @@ StandardError=journal
 SyslogIdentifier=cbu-adsb-tak
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=cbu-tak.target

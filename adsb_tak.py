@@ -16,7 +16,7 @@ import pytak
 CBU_TAILS = {
     "N935CB", "N944CB", "N207CB", "N233CB",
     "N255CB", "N246CB", "N248CB", "N259CB",
-    "N374CB", "N249CB", "N55462",
+    "N374CB", "N249CB", 
 
 }
 
