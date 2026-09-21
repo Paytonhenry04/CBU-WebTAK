@@ -1,0 +1,24 @@
+[Unit]
+Description=CBU/KRAL live web map (TAK client + web frontend on :8090)
+Documentation=https://github.com/Paytonhenry04/CBU-WebTAK
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=payton
+Group=payton
+WorkingDirectory=/home/payton/TAK/webmap/backend
+ExecStart=/home/payton/TAK/venv/bin/uvicorn app:app --host 0.0.0.0 --port 8090
+
+# The TAK listener reconnects on its own, so this mainly covers hard
+# crashes and reboots.
+Restart=always
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cbu-webmap
+
+[Install]
+WantedBy=multi-user.target

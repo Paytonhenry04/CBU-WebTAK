@@ -1,0 +1,28 @@
+[Unit]
+Description=CBU ADS-B to TAK feeder (publishes aircraft CoT to FreeTAKServer)
+Documentation=https://github.com/Paytonhenry04/CBU-WebTAK
+# FTS runs in Docker; this retries on its own if the server isn't up yet,
+# so this is ordering only, not a hard requirement.
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=payton
+Group=payton
+WorkingDirectory=/home/payton/TAK
+ExecStart=/home/payton/TAK/venv/bin/python3 /home/payton/TAK/adsb_tak.py
+
+# This script has no internal reconnect - it exits when FreeTAKServer
+# restarts or drops the connection. Restarting it here is what replaces
+# writing that reconnect logic, and matters more now that the web map has
+# no data source without it.
+Restart=always
+RestartSec=10
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cbu-adsb-tak
+
+[Install]
+WantedBy=multi-user.target
