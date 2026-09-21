@@ -30,107 +30,6 @@ function loadPlaneIcon() {
   });
 }
 
-// --- 3D aircraft models (three.js in a MapLibre custom layer) ---
-// The mesh is built procedurally rather than loading a glTF asset: no
-// external file to 404 or license, and this project has been bitten
-// repeatedly by third-party asset/endpoint failures.
-function buildPlaneMesh() {
-  const group = new THREE.Group();
-  const body = new THREE.MeshLambertMaterial({ color: 0x38bdf8 });
-  const trim = new THREE.MeshLambertMaterial({ color: 0x0f172a });
-
-  // Model is built nose-toward -Z, Y up, roughly 10 units long, then
-  // scaled to CONFIG.MODEL_3D.LENGTH_METERS at render time.
-  const fuselage = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.5, 9, 12), body);
-  fuselage.rotation.x = Math.PI / 2;
-  group.add(fuselage);
-
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.7, 2, 12), body);
-  nose.rotation.x = -Math.PI / 2;
-  nose.position.z = -5.5;
-  group.add(nose);
-
-  const wings = new THREE.Mesh(new THREE.BoxGeometry(13, 0.25, 2.2), body);
-  wings.position.z = -0.5;
-  group.add(wings);
-
-  const tailplane = new THREE.Mesh(new THREE.BoxGeometry(5, 0.22, 1.2), trim);
-  tailplane.position.z = 4;
-  group.add(tailplane);
-
-  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.22, 2.2, 1.6), trim);
-  fin.position.set(0, 1, 4.2);
-  group.add(fin);
-
-  return group;
-}
-
-const planes3D = {
-  id: "aircraft-3d",
-  type: "custom",
-  renderingMode: "3d",
-
-  onAdd(_map, gl) {
-    this.camera = new THREE.Camera();
-    this.scene = new THREE.Scene();
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.75));
-    const sun = new THREE.DirectionalLight(0xffffff, 0.9);
-    sun.position.set(0, 80, 100).normalize();
-    this.scene.add(sun);
-
-    this.plane = buildPlaneMesh();
-    this.scene.add(this.plane);
-
-    this.renderer = new THREE.WebGLRenderer({
-      canvas: _map.getCanvas(),
-      context: gl,
-      antialias: true,
-    });
-    this.renderer.autoClear = false;
-  },
-
-  render(gl, matrix) {
-    if (!use3DModels || map.getZoom() < CONFIG.MODEL_3D.MIN_ZOOM) return;
-    if (!latestAircraft.length) return;
-
-    const base = new THREE.Matrix4().fromArray(matrix);
-    // Converts the model's Y-up space into the map's Z-up mercator space.
-    const uprightRot = new THREE.Matrix4().makeRotationAxis(
-      new THREE.Vector3(1, 0, 0),
-      Math.PI / 2
-    );
-
-    for (const ac of latestAircraft) {
-      const altMeters = (ac.alt_ft || 0) * 0.3048;
-      const mc = maplibregl.MercatorCoordinate.fromLngLat(
-        [ac.lon, ac.lat],
-        altMeters
-      );
-      const unit = mc.meterInMercatorCoordinateUnits();
-      // Model is ~10 units long, so scale so it spans LENGTH_METERS.
-      const scale = unit * (CONFIG.MODEL_3D.LENGTH_METERS / 10);
-
-      const heading = ((ac.heading || 0) + CONFIG.MODEL_3D.HEADING_OFFSET_DEG) *
-        (Math.PI / 180);
-      // Rotating about the model's own up axis once it's upright.
-      this.plane.rotation.set(0, -heading, 0);
-
-      const model = new THREE.Matrix4()
-        .makeTranslation(mc.x, mc.y, mc.z)
-        .scale(new THREE.Vector3(scale, -scale, scale))
-        .multiply(uprightRot);
-
-      // clone() per aircraft: multiply() mutates in place.
-      this.camera.projectionMatrix = base.clone().multiply(model);
-      this.renderer.resetState();
-      this.renderer.render(this.scene, this.camera);
-    }
-    map.triggerRepaint();
-  },
-};
-
-let use3DModels = true;
-
 const map = new maplibregl.Map({
   container: "map",
   style: CONFIG.TILES.STREET_STYLE_URL,
@@ -159,13 +58,13 @@ async function addCustomLayers() {
       id: "cbu-campus-fill",
       type: "fill",
       source: "cbu-campus",
-      paint: { "fill-color": "#facc15", "fill-opacity": 0.1 },
+      paint: { "fill-color": "#2563eb", "fill-opacity": 0.12 },
     });
     map.addLayer({
       id: "cbu-campus-line",
       type: "line",
       source: "cbu-campus",
-      paint: { "line-color": "#facc15", "line-width": 3 },
+      paint: { "line-color": "#2563eb", "line-width": 3 },
     });
   }
 
@@ -242,6 +141,23 @@ async function addCustomLayers() {
       data: { type: "FeatureCollection", features: [] },
     });
   }
+  // Highlight ring under whichever aircraft is selected. Filtered to the
+  // selected registration, so it renders for exactly one aircraft (or none).
+  if (!map.getLayer("aircraft-highlight")) {
+    map.addLayer({
+      id: "aircraft-highlight",
+      type: "circle",
+      source: "aircraft",
+      filter: ["==", ["get", "reg"], ""],
+      paint: {
+        "circle-radius": 18,
+        "circle-color": "#22c55e",
+        "circle-opacity": 0.25,
+        "circle-stroke-color": "#22c55e",
+        "circle-stroke-width": 2.5,
+      },
+    });
+  }
   // Guaranteed-visible fallback marker under the icon - if the icon image
   // ever fails to load, aircraft position is still visible.
   if (!map.getLayer("aircraft-dot")) {
@@ -275,44 +191,9 @@ async function addCustomLayers() {
     });
   }
 
-  // 3D models last, on top. Guarded: if three.js failed to load from the
-  // CDN, the rest of the map must still work.
-  if (!map.getLayer("aircraft-3d")) {
-    try {
-      if (typeof THREE === "undefined") throw new Error("three.js not loaded");
-      map.addLayer(planes3D);
-    } catch (err) {
-      console.error("3D aircraft models unavailable, using flat icons:", err);
-      use3DModels = false;
-    }
-  }
-
-  updateAircraftRendering();
-}
-
-// The flat icon and the 3D model would otherwise draw on top of each other,
-// so only one is shown at a time depending on zoom and the toggle.
-function updateAircraftRendering() {
-  if (!map.getLayer("aircraft-symbol")) return;
-  const showModels =
-    use3DModels &&
-    map.getZoom() >= CONFIG.MODEL_3D.MIN_ZOOM &&
-    map.getLayer("aircraft-3d");
-  map.setLayoutProperty(
-    "aircraft-symbol",
-    "visibility",
-    showModels ? "none" : "visible"
-  );
 }
 
 map.on("load", addCustomLayers);
-map.on("zoomend", updateAircraftRendering);
-
-document.getElementById("use-3d-models").addEventListener("change", (e) => {
-  use3DModels = e.target.checked;
-  updateAircraftRendering();
-  map.triggerRepaint();
-});
 
 // --- Middle-mouse drag to tilt (pitch) the camera, for the 3D buildings ---
 // Hold the middle mouse button and drag up/down. Drag left/right at the same
@@ -396,18 +277,22 @@ map.on("click", "cbu-buildings-fill", (e) => {
     .addTo(map);
 });
 
-function aircraftPopupHTML(p) {
+// Aircraft details render into the bottom-left panel rather than a map
+// popup, which used to sit on top of the aircraft it described.
+function aircraftDetailsHTML(p) {
   const heading = p.heading != null && p.heading !== "" ? `${Math.round(p.heading)}°` : "unknown";
+  const row = (label, value) =>
+    `<div class="detail-row"><span>${label}</span><span>${value}</span></div>`;
   return (
-    `<strong>${p.callsign || p.reg}</strong><br>` +
-    `Registration: ${p.reg}<br>` +
-    `Type: ${p.type || "unknown"}<br>` +
-    `Owner: ${p.owner || "unknown"}<br>` +
-    `Altitude: ${p.alt_ft} ft<br>` +
-    `Speed: ${p.speed_kt} kt<br>` +
-    `Heading: ${heading}<br>` +
-    `Departure/Arrival: not available (no public source)<br>` +
-    `Pilot: not available (no public source)`
+    `<div class="detail-title">${p.callsign || p.reg}</div>` +
+    row("Registration", p.reg) +
+    row("Type", p.type || "unknown") +
+    row("Owner", p.owner || "unknown") +
+    row("Altitude", `${p.alt_ft} ft`) +
+    row("Speed", `${p.speed_kt} kt`) +
+    row("Heading", heading) +
+    row("Departure/Arrival", '<em>no public source</em>') +
+    row("Pilot", '<em>no public source</em>')
   );
 }
 
@@ -449,25 +334,29 @@ function clearTrack() {
 // --- Selection state: only one aircraft's details/trail shown at a time.
 // Icons themselves are always visible regardless of selection. ---
 let selectedReg = null;
-let selectedPopup = null;
+
+const detailsPanel = document.getElementById("aircraft-details");
+const detailsBody = document.getElementById("details-body");
+
+// Drives the highlight ring. Filtering to "" matches nothing, which is how
+// the ring is hidden when there's no selection.
+function setHighlight(reg) {
+  if (!map.getLayer("aircraft-highlight")) return;
+  map.setFilter("aircraft-highlight", ["==", ["get", "reg"], reg || ""]);
+}
 
 function deselectAircraft() {
   selectedReg = null;
-  if (selectedPopup) {
-    // Null it before remove() - remove() fires "close", which is wired
-    // to this same function, so this avoids re-entrant double-removal.
-    const popup = selectedPopup;
-    selectedPopup = null;
-    popup.off("close", deselectAircraft);
-    popup.remove();
-  }
+  setHighlight(null);
   clearTrack();
+  detailsPanel.classList.add("hidden");
+  detailsBody.innerHTML = "";
   document
     .querySelectorAll(".aircraft-row.selected")
     .forEach((el) => el.classList.remove("selected"));
 }
 
-function selectAircraft(reg, lngLat) {
+function selectAircraft(reg) {
   if (selectedReg === reg) {
     deselectAircraft();
     return;
@@ -475,16 +364,11 @@ function selectAircraft(reg, lngLat) {
   const ac = latestAircraft.find((a) => a.reg === reg);
   if (!ac) return;
 
-  if (selectedPopup) selectedPopup.remove();
   selectedReg = reg;
-
-  const at = lngLat || [ac.lon, ac.lat];
+  setHighlight(reg);
   map.easeTo({ center: [ac.lon, ac.lat], zoom: 13, duration: 1200 });
-  selectedPopup = new maplibregl.Popup({ closeOnClick: false })
-    .setLngLat(at)
-    .setHTML(aircraftPopupHTML(ac))
-    .addTo(map);
-  selectedPopup.on("close", deselectAircraft);
+  detailsBody.innerHTML = aircraftDetailsHTML(ac);
+  detailsPanel.classList.remove("hidden");
   showTrack(reg);
 
   document
@@ -492,17 +376,21 @@ function selectAircraft(reg, lngLat) {
     .forEach((el) => el.classList.toggle("selected", el.dataset.reg === reg));
 }
 
-map.on("click", "aircraft-symbol", (e) => {
-  selectAircraft(e.features[0].properties.reg, e.lngLat);
-});
-map.on("click", "aircraft-dot", (e) => {
-  selectAircraft(e.features[0].properties.reg, e.lngLat);
+document.getElementById("details-close").addEventListener("click", deselectAircraft);
+
+["aircraft-symbol", "aircraft-dot", "aircraft-highlight"].forEach((layer) => {
+  map.on("click", layer, (e) => selectAircraft(e.features[0].properties.reg));
 });
 
 // Clicking empty map (not on a plane or building) deselects.
 map.on("click", (e) => {
   const hits = map.queryRenderedFeatures(e.point, {
-    layers: ["aircraft-symbol", "aircraft-dot", "cbu-buildings-fill"],
+    layers: [
+      "aircraft-symbol",
+      "aircraft-dot",
+      "aircraft-highlight",
+      "cbu-buildings-fill",
+    ],
   });
   if (hits.length === 0 && selectedReg) deselectAircraft();
 });
@@ -550,8 +438,13 @@ async function pollAircraft() {
     const src = map.getSource("aircraft");
     if (src) src.setData(fc);
     renderAircraftList(data);
-    // Keep the selected aircraft's trail growing as it flies.
-    if (selectedReg) showTrack(selectedReg);
+    if (selectedReg) {
+      // Keep the trail growing and the details live as the aircraft moves.
+      showTrack(selectedReg);
+      const ac = data.find((a) => a.reg === selectedReg);
+      if (ac) detailsBody.innerHTML = aircraftDetailsHTML(ac);
+      else deselectAircraft(); // went stale / landed out of coverage
+    }
     statusEl.textContent = `${data.length} aircraft tracked - updated ${new Date().toLocaleTimeString()}`;
   } catch (err) {
     statusEl.textContent = `Connection issue: ${err.message}`;
