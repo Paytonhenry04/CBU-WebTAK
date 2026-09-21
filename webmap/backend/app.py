@@ -58,6 +58,11 @@ async def get_aircraft():
     return JSONResponse(list(adsb_poller.AIRCRAFT_STATE.values()))
 
 
+@app.get("/api/aircraft/{reg}/track")
+async def get_track(reg: str):
+    return JSONResponse(adsb_poller.TRACK_STATE.get(reg.upper(), []))
+
+
 @app.get("/api/health")
 async def get_health():
     return {"status": "ok", "tracked_aircraft": len(adsb_poller.AIRCRAFT_STATE)}
