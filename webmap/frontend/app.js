@@ -56,9 +56,10 @@ function loadPlaneIcon() {
 }
 
 function satelliteStyle() {
+  // No `glyphs` URL here on purpose - the one previously used 404'd, and
+  // since our own layers no longer use text-field, nothing needs it.
   return {
     version: 8,
-    glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
     sources: {
       esri: {
         type: "raster",
@@ -103,7 +104,7 @@ async function addCustomLayers() {
       source: "cbu-buildings",
       minzoom: 15,
       paint: {
-        "fill-extrusion-height": ["coalesce", ["get", "render_height"], 8],
+        "fill-extrusion-height": ["get", "render_height"],
         "fill-extrusion-color": [
           "case",
           ["!=", ["get", "name"], null],
@@ -202,6 +203,11 @@ async function addCustomLayers() {
       },
     });
   }
+  // No text-field/glyphs here on purpose - callsign is already shown in the
+  // popup and the Active Flights list, and a broken glyphs URL (which
+  // happened on the satellite style) can take a whole symbol layer's
+  // rendering down with it, including the icon. Keeping this icon-only
+  // avoids that entire class of failure.
   if (!map.getLayer("aircraft-symbol")) {
     map.addLayer({
       id: "aircraft-symbol",
@@ -209,19 +215,10 @@ async function addCustomLayers() {
       source: "aircraft",
       layout: {
         "icon-image": "plane-icon",
-        "icon-rotate": ["coalesce", ["get", "heading"], 0],
+        "icon-rotate": ["get", "heading"],
         "icon-rotation-alignment": "map",
         "icon-allow-overlap": true,
         "icon-size": 0.8,
-        "text-field": ["get", "callsign"],
-        "text-offset": [0, 1.4],
-        "text-size": 11,
-        "text-allow-overlap": true,
-      },
-      paint: {
-        "text-color": "#ffffff",
-        "text-halo-color": "#000000",
-        "text-halo-width": 1.2,
       },
     });
   }
