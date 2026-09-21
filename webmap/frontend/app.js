@@ -25,24 +25,32 @@ function circlePolygon(centerLonLat, radiusMeters, points = 64) {
   };
 }
 
-function makePlaneIconData(size = 40, color = "#38bdf8") {
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  ctx.translate(size / 2, size / 2);
-  ctx.fillStyle = color;
-  ctx.strokeStyle = "#0f172a";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(0, -size * 0.42);
-  ctx.lineTo(size * 0.30, size * 0.36);
-  ctx.lineTo(0, size * 0.18);
-  ctx.lineTo(-size * 0.30, size * 0.36);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  return ctx.getImageData(0, 0, size, size);
+// Loads the plane icon the way MapLibre's own docs recommend (map.loadImage
+// with a data URI), rather than passing a canvas ImageData object directly -
+// more broadly compatible, and lets us confirm load success/failure.
+function loadPlaneIcon() {
+  return new Promise((resolve) => {
+    if (map.hasImage("plane-icon")) {
+      resolve();
+      return;
+    }
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">' +
+      '<polygon points="24,4 40,42 24,32 8,42" fill="#38bdf8" stroke="#0f172a" stroke-width="2"/>' +
+      "</svg>";
+    const url = "data:image/svg+xml;base64," + btoa(svg);
+    map.loadImage(url, (error, image) => {
+      if (error) {
+        console.error("Failed to load plane icon:", error);
+        resolve();
+        return;
+      }
+      if (!map.hasImage("plane-icon")) {
+        map.addImage("plane-icon", image);
+      }
+      resolve();
+    });
+  });
 }
 
 function satelliteStyle() {
@@ -75,10 +83,8 @@ const map = new maplibregl.Map({
 
 map.addControl(new maplibregl.NavigationControl(), "top-right");
 
-function addCustomLayers() {
-  if (!map.hasImage("plane-icon")) {
-    map.addImage("plane-icon", makePlaneIconData(), { pixelRatio: 2 });
-  }
+async function addCustomLayers() {
+  await loadPlaneIcon();
 
   // CBU buildings: fill-extrusion, only rendered/clickable once zoomed
   // into the campus focal point (minzoom gate does this implicitly).
@@ -151,6 +157,24 @@ function addCustomLayers() {
       type: "fill",
       source: "kral-airport",
       paint: { "fill-color": "#f87171", "fill-opacity": 0.06 },
+    });
+  }
+
+  // Flight trail for whichever aircraft is currently selected (since
+  // takeoff, per adsb_poller.py's ground/airborne transition tracking).
+  if (!map.getSource("aircraft-track")) {
+    map.addSource("aircraft-track", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!map.getLayer("aircraft-track-line")) {
+    map.addLayer({
+      id: "aircraft-track-line",
+      type: "line",
+      source: "aircraft-track",
+      layout: { "line-join": "round", "line-cap": "round" },
+      paint: { "line-color": "#facc15", "line-width": 2.5, "line-opacity": 0.85 },
     });
   }
 
@@ -242,16 +266,47 @@ function aircraftPopupHTML(p) {
   );
 }
 
+// Fetches and renders the selected aircraft's flight trail since takeoff.
+async function showTrack(reg) {
+  try {
+    const res = await fetch(`/api/aircraft/${encodeURIComponent(reg)}/track`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const points = await res.json();
+    const src = map.getSource("aircraft-track");
+    if (!src) return;
+    if (points.length < 2) {
+      src.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+    src.setData({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: { reg },
+          geometry: {
+            type: "LineString",
+            coordinates: points.map((p) => [p.lon, p.lat]),
+          },
+        },
+      ],
+    });
+  } catch (err) {
+    console.error("Failed to load flight track:", err);
+  }
+}
+
 map.on("click", "aircraft-symbol", (e) => {
   const p = e.features[0].properties;
   new maplibregl.Popup()
     .setLngLat(e.lngLat)
     .setHTML(aircraftPopupHTML(p))
     .addTo(map);
+  showTrack(p.reg);
 });
 
-// Fly to and show the popup for a specific aircraft by registration,
-// used by the "Active Flights" list.
+// Fly to and show the popup + flight trail for a specific aircraft by
+// registration, used by the "Active Flights" list.
 function selectAircraft(reg) {
   const ac = latestAircraft.find((a) => a.reg === reg);
   if (!ac) return;
@@ -260,6 +315,7 @@ function selectAircraft(reg) {
     .setLngLat([ac.lon, ac.lat])
     .setHTML(aircraftPopupHTML(ac))
     .addTo(map);
+  showTrack(reg);
 }
 
 ["cbu-buildings-fill", "aircraft-symbol"].forEach((layer) => {

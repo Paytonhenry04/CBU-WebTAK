@@ -25,6 +25,13 @@ logger = logging.getLogger("adsb_poller")
 # uid -> aircraft dict. Read by app.py's /api/aircraft handler.
 AIRCRAFT_STATE: dict[str, dict] = {}
 
+# reg -> list of {lat, lon, alt_ft, t} points, in poll order. Cleared each
+# time an aircraft transitions from on-ground to airborne, so this is
+# effectively "track since takeoff" rather than an unbounded history.
+# Read by app.py's /api/aircraft/{reg}/track handler.
+TRACK_STATE: dict[str, list[dict]] = {}
+MAX_TRACK_POINTS = 1000
+
 
 def _to_state(ac: dict) -> dict | None:
     reg = ac.get("r", "UNKNOWN")
@@ -33,7 +40,8 @@ def _to_state(ac: dict) -> dict | None:
         return None
 
     alt_baro = ac.get("alt_baro", 0)
-    alt_ft = 0 if alt_baro == "ground" else float(alt_baro or 0)
+    on_ground = alt_baro == "ground"
+    alt_ft = 0 if on_ground else float(alt_baro or 0)
     gs_kt = float(ac.get("gs", 0) or 0)
     course = float(ac.get("track", 0) or 0)
     callsign = (ac.get("flight") or reg).strip()
@@ -50,8 +58,25 @@ def _to_state(ac: dict) -> dict | None:
         "alt_ft": round(alt_ft),
         "speed_kt": round(gs_kt),
         "heading": course,
+        "on_ground": on_ground,
         "last_seen": datetime.now(timezone.utc).isoformat(),
     }
+
+
+def _update_track(parsed: dict, was_on_ground: bool) -> None:
+    track = TRACK_STATE.setdefault(parsed["reg"], [])
+    if was_on_ground and not parsed["on_ground"]:
+        track.clear()  # takeoff detected - start a fresh trail
+    if not parsed["on_ground"]:
+        track.append(
+            {
+                "lat": parsed["lat"],
+                "lon": parsed["lon"],
+                "alt_ft": parsed["alt_ft"],
+                "t": parsed["last_seen"],
+            }
+        )
+        del track[:-MAX_TRACK_POINTS]
 
 
 async def run_forever() -> None:
@@ -62,7 +87,10 @@ async def run_forever() -> None:
                 for ac in hits:
                     parsed = _to_state(ac)
                     if parsed:
+                        prev = AIRCRAFT_STATE.get(parsed["uid"])
+                        was_on_ground = prev["on_ground"] if prev else True
                         AIRCRAFT_STATE[parsed["uid"]] = parsed
+                        _update_track(parsed, was_on_ground)
                 logger.info("Polled %d CBU aircraft", len(hits))
             except Exception as exc:  # noqa: BLE001 - keep polling regardless
                 logger.warning("adsb.fi poll failed: %s", exc)
