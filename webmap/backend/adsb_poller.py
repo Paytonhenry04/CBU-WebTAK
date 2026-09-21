@@ -43,7 +43,7 @@ TRACK_RETENTION_HOURS = 12
 # Deliberately separate from adsb_tak.POLL_SECONDS: the web map wants
 # smoother movement than the CoT feeder needs, and changing the shared
 # constant would alter what adsb_tak.py sends to FreeTAKServer too.
-POLL_SECONDS = 5
+POLL_SECONDS = 3
 
 
 def _to_state(ac: dict) -> dict | None:

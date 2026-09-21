@@ -11,9 +11,6 @@
     rel="stylesheet"
   />
   <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <!-- r149 is the newest three.js that still ships a real UMD build;
-       r160's three.min.js is only a deprecation stub. -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -25,16 +22,17 @@
       <button data-focal="cbu">CBU Campus</button>
       <button data-focal="kral">KRAL Airport</button>
     </div>
-    <label id="model-toggle">
-      <input type="checkbox" id="use-3d-models" checked />
-      3D plane models
-    </label>
-    <div id="tilt-hint">Hold middle mouse + drag to tilt for 3D</div>
+    <div id="tilt-hint">Hold middle mouse + drag to tilt for 3D buildings</div>
     <div id="aircraft-list-wrap">
       <div id="aircraft-list-heading">Active Flights</div>
       <div id="aircraft-list">None currently tracked</div>
     </div>
     <div id="status">Loading...</div>
+  </div>
+
+  <div id="aircraft-details" class="hidden">
+    <button id="details-close" title="Close">&times;</button>
+    <div id="details-body"></div>
   </div>
 
   <script src="/config.js"></script>
