@@ -2,6 +2,7 @@ services:
   freetakserver:
     image: ghcr.io/freetakteam/freetakserver:latest
     hostname: freetakserver
+    restart: unless-stopped
     networks:
         taknet:
             ipv4_address: 172.28.0.2
@@ -57,6 +58,7 @@ services:
   freetakserver-ui:
     image: ghcr.io/freetakteam/ui:latest
     hostname: freetakserver-ui
+    restart: unless-stopped
     networks:
         - taknet
     ports:

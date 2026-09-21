@@ -10,7 +10,34 @@
    `http://paytons-mc-server.duckdns.org:8090/`
    No login, public.
 
-## Starting everything
+## Starting everything (recommended: run as services)
+
+One-time setup. After this, everything starts on boot and restarts itself
+if it crashes:
+
+```bash
+cd ~/TAK
+sudo ./deploy/install.sh
+```
+
+Then you never start anything by hand again. Day-to-day:
+
+```bash
+systemctl status cbu-adsb-tak cbu-webmap   # is it healthy?
+journalctl -u cbu-adsb-tak -f              # watch the CoT feeder
+journalctl -u cbu-webmap -f                # watch the web map
+systemctl restart cbu-webmap               # restart one service
+```
+
+FreeTAKServer runs under Docker and now has `restart: unless-stopped`, so
+it comes back on boot too.
+
+Why this matters: `adsb_tak.py` has no internal reconnect and exits when
+FreeTAKServer restarts. Since the web map's only data source is CoT from
+FTS, that used to take the map's data down with it. systemd restarting it
+automatically is what covers that.
+
+## Starting everything manually (if you're not using the services)
 
 Run these from `~/TAK`, in order.
 
