@@ -4,3 +4,4 @@ __pycache__/
 *.log
 ftserver/.env
 PROJECT_STATUS.md
+webmap/track_history.json

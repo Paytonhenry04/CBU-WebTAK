@@ -17,6 +17,7 @@ HEADERS = {"User-Agent": "cbu-tak-webmap/1.0 (research)"}
 # CBU campus, resolved via Nominatim to OSM relation 13218766
 # (Overpass area id = 3600000000 + relation id)
 CBU_AREA_ID = 3613218766
+CBU_RELATION_ID = 13218766
 # Riverside Municipal Airport (KRAL) aerodrome boundary
 KRAL_WAY_ID = 127837011
 
@@ -102,6 +103,43 @@ def fetch_cbu_buildings():
     print(f"cbu_buildings.geojson: {len(features)} features ({named} named) -> {out_path}")
 
 
+def fetch_campus_boundary():
+    """The real CBU campus outline (OSM amenity=university relation), not a
+    synthetic circle. It's a multipolygon - the campus is several parcels."""
+    query = (
+        f"[out:json][timeout:50];relation(id:{CBU_RELATION_ID});out geom;"
+    )
+    data = overpass(query)
+    els = data["elements"]
+    if not els:
+        raise RuntimeError(f"CBU relation {CBU_RELATION_ID} returned no elements")
+    el = els[0]
+
+    rings = [
+        [[nd["lon"], nd["lat"]] for nd in m["geometry"]]
+        for m in el.get("members", [])
+        if m.get("role") == "outer" and "geometry" in m
+    ]
+    if not rings:
+        raise RuntimeError("CBU relation had no outer rings with geometry")
+
+    feature = {
+        "type": "Feature",
+        "geometry": {
+            "type": "MultiPolygon",
+            "coordinates": [[ring] for ring in rings],
+        },
+        "properties": {
+            "osm_id": el["id"],
+            "name": el.get("tags", {}).get("name", "California Baptist University"),
+        },
+    }
+    fc = {"type": "FeatureCollection", "features": [feature]}
+    out_path = DATA_DIR / "cbu_campus.geojson"
+    out_path.write_text(json.dumps(fc))
+    print(f"cbu_campus.geojson: {len(rings)} outer rings -> {out_path}")
+
+
 def fetch_kral_boundary():
     query = f"[out:json][timeout:40];way(id:{KRAL_WAY_ID});out geom;"
     data = overpass(query)
@@ -122,4 +160,5 @@ def fetch_kral_boundary():
 
 if __name__ == "__main__":
     fetch_cbu_buildings()
+    fetch_campus_boundary()
     fetch_kral_boundary()

@@ -21,10 +21,18 @@ html, body, #map {
   max-width: 220px;
 }
 
-#focal-buttons, #layer-toggle {
+#focal-buttons {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+#tilt-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.4;
+  border-top: 1px solid #334155;
+  padding-top: 6px;
 }
 
 #controls button {

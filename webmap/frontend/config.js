@@ -30,21 +30,13 @@ const CONFIG = {
     },
   },
 
-  // Simple client-side geofence circle around CBU (we only have building
-  // footprints from OSM, not an official campus boundary polygon, so a
-  // fixed-radius circle is the honest way to draw "a geofence around CBU").
-  CBU_GEOFENCE_CENTER: [-117.4259206, 33.9283239],
-  CBU_GEOFENCE_RADIUS_M: 900,
-
   TILES: {
     STREET_STYLE_URL: "https://tiles.openfreemap.org/styles/liberty",
-    SATELLITE_TILE_URL:
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    SATELLITE_ATTRIBUTION: "Esri, Maxar, Earthstar Geographics",
   },
 
   GEO_DATA: {
     CBU_BUILDINGS: "/static/geo/cbu_buildings.geojson",
+    CBU_CAMPUS: "/static/geo/cbu_campus.geojson",
     KRAL_AIRPORT: "/static/geo/kral_airport.geojson",
   },
 };

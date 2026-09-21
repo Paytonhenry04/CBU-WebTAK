@@ -10,9 +10,11 @@ unaffected; real TAK clients (ATAK etc.) still get that.
 """
 
 import asyncio
+import json
 import logging
+import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import aiohttp
@@ -25,12 +27,18 @@ logger = logging.getLogger("adsb_poller")
 # uid -> aircraft dict. Read by app.py's /api/aircraft handler.
 AIRCRAFT_STATE: dict[str, dict] = {}
 
-# reg -> list of {lat, lon, alt_ft, t} points, in poll order. Cleared each
-# time an aircraft transitions from on-ground to airborne, so this is
-# effectively "track since takeoff" rather than an unbounded history.
-# Read by app.py's /api/aircraft/{reg}/track handler.
+# reg -> list of {lat, lon, alt_ft, t} points, in poll order. Cleared only on
+# an observed on-ground -> airborne transition, so a trail represents the
+# flight since takeoff. Read by app.py's /api/aircraft/{reg}/track handler.
 TRACK_STATE: dict[str, list[dict]] = {}
-MAX_TRACK_POINTS = 1000
+MAX_TRACK_POINTS = 5000
+
+# Trails are persisted to disk so a backend restart doesn't wipe a flight's
+# history mid-flight (there is no free historical-trace API to rebuild it
+# from - adsb.fi's is Cloudflare-gated, adsb.lol doesn't serve traces - so
+# once a point is lost it's gone for good).
+TRACK_FILE = Path(__file__).resolve().parent.parent / "track_history.json"
+TRACK_RETENTION_HOURS = 12
 
 
 def _to_state(ac: dict) -> dict | None:
@@ -63,23 +71,75 @@ def _to_state(ac: dict) -> dict | None:
     }
 
 
+def load_tracks() -> None:
+    """Restore trails from disk on startup, dropping anything too old."""
+    if not TRACK_FILE.exists():
+        return
+    try:
+        stored = json.loads(TRACK_FILE.read_text())
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("Could not read %s (%s), starting with empty trails", TRACK_FILE, exc)
+        return
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=TRACK_RETENTION_HOURS)
+    restored = 0
+    for reg, points in stored.items():
+        if not points:
+            continue
+        try:
+            if datetime.fromisoformat(points[-1]["t"]) < cutoff:
+                continue
+        except (KeyError, ValueError):
+            continue
+        TRACK_STATE[reg] = points[-MAX_TRACK_POINTS:]
+        restored += 1
+    logger.info("Restored %d flight trails from %s", restored, TRACK_FILE)
+
+
+def save_tracks() -> None:
+    """Write trails to disk atomically (temp file + rename), so a crash or
+    restart mid-write can't leave a corrupted history file behind."""
+    try:
+        tmp = TRACK_FILE.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(TRACK_STATE))
+        os.replace(tmp, TRACK_FILE)
+    except OSError as exc:
+        logger.warning("Could not persist trails to %s: %s", TRACK_FILE, exc)
+
+
 def _update_track(parsed: dict, was_on_ground: bool) -> None:
+    """Maintain a trail that runs from the departure point to the aircraft's
+    current position.
+
+    While an aircraft is on the ground only its latest fix is kept, so a long
+    taxi doesn't clutter the trail. The moment it leaves the ground that last
+    ground fix is retained as the trail's origin, which is what makes the
+    line actually start at the runway rather than at the first airborne fix.
+
+    Note: touch-and-go circuits (common for these training aircraft) briefly
+    register as on-ground, so each circuit starts a fresh trail.
+    """
     track = TRACK_STATE.setdefault(parsed["reg"], [])
-    if was_on_ground and not parsed["on_ground"]:
-        track.clear()  # takeoff detected - start a fresh trail
-    if not parsed["on_ground"]:
-        track.append(
-            {
-                "lat": parsed["lat"],
-                "lon": parsed["lon"],
-                "alt_ft": parsed["alt_ft"],
-                "t": parsed["last_seen"],
-            }
-        )
-        del track[:-MAX_TRACK_POINTS]
+    on_ground = parsed["on_ground"]
+
+    if was_on_ground and not on_ground:
+        del track[:-1]  # just lifted off - keep the departure fix as origin
+    elif on_ground:
+        track.clear()  # on the ground - hold only the latest fix
+
+    track.append(
+        {
+            "lat": parsed["lat"],
+            "lon": parsed["lon"],
+            "alt_ft": parsed["alt_ft"],
+            "t": parsed["last_seen"],
+        }
+    )
+    del track[:-MAX_TRACK_POINTS]
 
 
 async def run_forever() -> None:
+    load_tracks()
     async with aiohttp.ClientSession() as session:
         while True:
             try:
@@ -88,9 +148,16 @@ async def run_forever() -> None:
                     parsed = _to_state(ac)
                     if parsed:
                         prev = AIRCRAFT_STATE.get(parsed["uid"])
-                        was_on_ground = prev["on_ground"] if prev else True
+                        # Default False, NOT True: with no previous
+                        # observation (first sight, or first poll after a
+                        # restart) we have not *seen* this aircraft on the
+                        # ground, so treating it as a takeoff would wipe the
+                        # trail we just restored from disk mid-flight.
+                        was_on_ground = prev["on_ground"] if prev else False
                         AIRCRAFT_STATE[parsed["uid"]] = parsed
                         _update_track(parsed, was_on_ground)
+                if hits:
+                    save_tracks()
                 logger.info("Polled %d CBU aircraft", len(hits))
             except Exception as exc:  # noqa: BLE001 - keep polling regardless
                 logger.warning("adsb.fi poll failed: %s", exc)
