@@ -15,7 +15,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -50,6 +50,17 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.middleware("http")
+async def no_cache(request: Request, call_next):
+    # StaticFiles sends no Cache-Control by default, so browsers fall back
+    # to heuristic caching and can silently keep serving an old app.js
+    # across normal refreshes while this project is actively iterating.
+    # force revalidation (still cheap: ETag/Last-Modified still give 304s).
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @app.get("/api/aircraft")
