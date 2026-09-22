@@ -60,7 +60,12 @@ services:
     hostname: freetakserver-ui
     restart: unless-stopped
     networks:
-        - taknet
+        # Pinned too, not just the core service. With only one static
+        # address assigned, whichever container starts first takes .2 from
+        # the pool - and if the UI wins, the core fails to start with
+        # "Address already in use".
+        taknet:
+            ipv4_address: 172.28.0.3
     ports:
       - 5000:5000
     # The image never creates /home/freetak/data itself, and the named volume
