@@ -20,6 +20,9 @@ CBU_AREA_ID = 3613218766
 CBU_RELATION_ID = 13218766
 # Riverside Municipal Airport (KRAL) aerodrome boundary
 KRAL_WAY_ID = 127837011
+# Search origin, matching KRAL_LAT/KRAL_LON/SEARCH_RADIUS_NM in adsb_tak.py
+KRAL_LAT = 33.9519
+KRAL_LON = -117.4459
 
 DATA_DIR = Path(__file__).parent
 
@@ -140,6 +143,52 @@ def fetch_campus_boundary():
     print(f"cbu_campus.geojson: {len(rings)} outer rings -> {out_path}")
 
 
+def fetch_airports():
+    """Every aerodrome within the same radius adsb_tak.py searches, so
+    takeoffs and landings can be matched to a field by position."""
+    radius_m = int(100 * 1852)  # SEARCH_RADIUS_NM in adsb_tak.py
+    query = (
+        "[out:json][timeout:50];"
+        f'(node["aeroway"="aerodrome"](around:{radius_m},{KRAL_LAT},{KRAL_LON});'
+        f'way["aeroway"="aerodrome"](around:{radius_m},{KRAL_LAT},{KRAL_LON}););'
+        "out center tags;"
+    )
+    data = overpass(query)
+
+    features = []
+    for el in data["elements"]:
+        tags = el.get("tags", {})
+        name = tags.get("name")
+        icao = tags.get("icao")
+        if not name and not icao:
+            continue  # unnamed dirt strips would only produce bogus matches
+        if el["type"] == "node":
+            lon, lat = el.get("lon"), el.get("lat")
+        else:
+            center = el.get("center") or {}
+            lon, lat = center.get("lon"), center.get("lat")
+        if lon is None or lat is None:
+            continue
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [lon, lat]},
+                "properties": {
+                    "osm_id": el["id"],
+                    "name": name,
+                    "icao": icao,
+                    "iata": tags.get("iata"),
+                },
+            }
+        )
+
+    fc = {"type": "FeatureCollection", "features": features}
+    out_path = DATA_DIR / "airports.geojson"
+    out_path.write_text(json.dumps(fc))
+    with_icao = sum(1 for f in features if f["properties"]["icao"])
+    print(f"airports.geojson: {len(features)} aerodromes ({with_icao} with ICAO) -> {out_path}")
+
+
 def fetch_kral_boundary():
     query = f"[out:json][timeout:40];way(id:{KRAL_WAY_ID});out geom;"
     data = overpass(query)
@@ -161,4 +210,5 @@ def fetch_kral_boundary():
 if __name__ == "__main__":
     fetch_cbu_buildings()
     fetch_campus_boundary()
+    fetch_airports()
     fetch_kral_boundary()

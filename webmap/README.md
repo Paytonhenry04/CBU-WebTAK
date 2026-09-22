@@ -150,11 +150,36 @@ are behind a Cloudflare challenge and adsb.lol doesn't serve traces - so any
 point not captured live is gone for good. A flight that was already airborne
 before the listener ever saw it can't be back-filled to its real takeoff.
 
+## Departure and arrival
+
+These aren't filed flight plans - no free source has those. They're
+*derived* from the same ground/airborne transitions that anchor the flight
+trail: the position at liftoff is matched to the nearest aerodrome to give
+departure, and the position at touchdown gives arrival. 146 aerodromes
+within 100nm of KRAL are cached in `data/airports.geojson`.
+
+A touchdown more than 4km from any known field is left unmatched rather
+than attributed to whatever happens to be nearest.
+
+Touch-and-go circuits are the common case for these training aircraft, so
+a landing followed by a departure within 90 seconds is reclassified as a
+touch-and-go: the leg continues with its original departure and a counter
+is shown, instead of inventing an arrival and a new flight. A genuine
+turnaround (land at Chino, sit, depart again) does start a new leg with
+Chino as its departure.
+
+A landing is recorded immediately rather than waiting to confirm the
+aircraft stays put, because a parked aircraft usually stops transmitting -
+waiting would mean never recording the arrival at all.
+
+Departure is blank for any flight already airborne when the listener first
+saw it; it can't be back-filled. State survives restarts via
+`flight_state.json` (gitignored).
+
 ## Known limitations
 
-- Aircraft "departure/arrival airport" and "pilot" are not available from
-  any public ADS-B source, and are deliberately shown as
-  "not available (no public source)" in the UI rather than guessed.
+- Pilot identity is not in any public ADS-B source and is shown as
+  "no public source" rather than guessed.
 - Building names/types/descriptions beyond what OpenStreetMap tags provide
   come from `data/building_info.json`; 147 of the 223 footprints have no
   OSM `name` and start out black until filled in.

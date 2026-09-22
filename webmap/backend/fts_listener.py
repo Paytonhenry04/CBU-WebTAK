@@ -47,6 +47,22 @@ MAX_TRACK_POINTS = 5000
 TRACK_FILE = Path(__file__).resolve().parent.parent / "track_history.json"
 TRACK_RETENTION_HOURS = 12
 
+# reg -> {departure, departure_time, arrival, arrival_time, touch_and_go}.
+# Derived from observed ground/airborne transitions matched against nearby
+# aerodromes - these are *observed* movements, not filed flight plans.
+FLIGHT_STATE: dict[str, dict] = {}
+FLIGHT_FILE = Path(__file__).resolve().parent.parent / "flight_state.json"
+
+AIRPORTS_FILE = Path(__file__).resolve().parent.parent / "data" / "airports.geojson"
+_AIRPORTS: list[dict] = []
+
+# Below this, a landing followed by a departure is a touch-and-go rather than
+# a real arrival - constant for training aircraft flying circuits.
+MIN_GROUND_SECONDS = 90
+# A touchdown further than this from any known field is left unmatched
+# instead of being attributed to whatever happens to be nearest.
+AIRPORT_MATCH_KM = 4.0
+
 # When the last CoT arrived, so the UI can be honest about the TAK link
 # instead of just showing an empty map.
 LINK_STATE: dict[str, object] = {"connected": False, "last_cot": None}
@@ -183,12 +199,127 @@ def load_tracks() -> None:
 
 
 def save_tracks() -> None:
+    _atomic_write(TRACK_FILE, TRACK_STATE)
+    _atomic_write(FLIGHT_FILE, FLIGHT_STATE)
+
+
+def _atomic_write(path: Path, payload) -> None:
     try:
-        tmp = TRACK_FILE.with_suffix(".json.tmp")
-        tmp.write_text(json.dumps(TRACK_STATE))
-        os.replace(tmp, TRACK_FILE)
+        tmp = path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(payload))
+        os.replace(tmp, path)
     except OSError as exc:
-        logger.warning("Could not persist trails: %s", exc)
+        logger.warning("Could not persist %s: %s", path.name, exc)
+
+
+def load_flights() -> None:
+    """Restore departure/arrival state so a restart mid-flight doesn't lose
+    where an aircraft departed from - that can't be re-derived after the fact."""
+    if not FLIGHT_FILE.exists():
+        return
+    try:
+        stored = json.loads(FLIGHT_FILE.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Could not read %s (%s)", FLIGHT_FILE, exc)
+        return
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=TRACK_RETENTION_HOURS)
+    for reg, flight in stored.items():
+        stamp = flight.get("arrival_time") or flight.get("departure_time")
+        if not stamp:
+            continue
+        try:
+            if datetime.fromisoformat(stamp) < cutoff:
+                continue
+        except ValueError:
+            continue
+        FLIGHT_STATE[reg] = flight
+    logger.info("Restored %d flight records", len(FLIGHT_STATE))
+
+
+def load_airports() -> None:
+    global _AIRPORTS
+    try:
+        data = json.loads(AIRPORTS_FILE.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("No airport data (%s) - departure/arrival disabled", exc)
+        return
+    _AIRPORTS = [
+        {
+            "lon": f["geometry"]["coordinates"][0],
+            "lat": f["geometry"]["coordinates"][1],
+            "code": f["properties"].get("icao") or f["properties"].get("iata"),
+            "name": f["properties"].get("name"),
+        }
+        for f in data.get("features", [])
+    ]
+    logger.info("Loaded %d aerodromes for departure/arrival matching", len(_AIRPORTS))
+
+
+def _km_between(lat1, lon1, lat2, lon2) -> float:
+    from math import asin, cos, radians, sin, sqrt
+
+    dlat, dlon = radians(lat2 - lat1), radians(lon2 - lon1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+    return 6371.0 * 2 * asin(sqrt(a))
+
+
+def nearest_airport(lat: float, lon: float) -> dict | None:
+    """Closest aerodrome within AIRPORT_MATCH_KM, or None."""
+    best, best_km = None, AIRPORT_MATCH_KM
+    for ap in _AIRPORTS:
+        km = _km_between(lat, lon, ap["lat"], ap["lon"])
+        if km < best_km:
+            best, best_km = ap, km
+    if best is None:
+        return None
+    return {"code": best["code"], "name": best["name"], "km": round(best_km, 2)}
+
+
+def _blank_flight() -> dict:
+    return {
+        "departure": None,
+        "departure_time": None,
+        "arrival": None,
+        "arrival_time": None,
+        "touch_and_go": 0,
+    }
+
+
+def _update_flight(parsed: dict, was_on_ground: bool) -> None:
+    """Track departure/arrival from observed ground<->airborne transitions.
+
+    A landing is recorded immediately rather than waiting to confirm the
+    aircraft stays put, because a parked aircraft often stops transmitting
+    altogether - waiting would mean never recording the arrival at all. If
+    it departs again within MIN_GROUND_SECONDS it's reclassified as a
+    touch-and-go and the same leg continues.
+    """
+    flight = FLIGHT_STATE.setdefault(parsed["reg"], _blank_flight())
+    now = datetime.fromisoformat(parsed["last_seen"])
+
+    if was_on_ground and not parsed["on_ground"]:
+        arrived = flight.get("arrival_time")
+        recent_landing = False
+        if arrived:
+            try:
+                recent_landing = (
+                    now - datetime.fromisoformat(arrived)
+                ).total_seconds() < MIN_GROUND_SECONDS
+            except ValueError:
+                pass
+
+        if recent_landing:
+            flight["arrival"] = None
+            flight["arrival_time"] = None
+            flight["touch_and_go"] = flight.get("touch_and_go", 0) + 1
+        else:
+            flight.update(_blank_flight())
+            flight["departure"] = nearest_airport(parsed["lat"], parsed["lon"])
+            flight["departure_time"] = parsed["last_seen"]
+
+    elif not was_on_ground and parsed["on_ground"]:
+        flight["arrival"] = nearest_airport(parsed["lat"], parsed["lon"])
+        flight["arrival_time"] = parsed["last_seen"]
 
 
 def _update_track(parsed: dict, was_on_ground: bool) -> None:
@@ -234,6 +365,8 @@ async def _drain(rx_queue: asyncio.Queue) -> None:
         # first event after a restart) we haven't *seen* it on the ground, so
         # calling it a takeoff would wipe the trail restored from disk.
         was_on_ground = prev["on_ground"] if prev else False
+        _update_flight(parsed, was_on_ground)
+        parsed["flight"] = FLIGHT_STATE.get(parsed["reg"])
         AIRCRAFT_STATE[parsed["uid"]] = parsed
         _update_track(parsed, was_on_ground)
 
@@ -241,7 +374,7 @@ async def _drain(rx_queue: asyncio.Queue) -> None:
 async def _save_loop() -> None:
     while True:
         await asyncio.sleep(10)
-        if TRACK_STATE:
+        if TRACK_STATE or FLIGHT_STATE:
             save_tracks()
 
 
@@ -272,7 +405,9 @@ async def _connect_once() -> None:
 
 
 async def run_forever() -> None:
+    load_airports()
     load_tracks()
+    load_flights()
     while True:
         try:
             await _connect_once()
