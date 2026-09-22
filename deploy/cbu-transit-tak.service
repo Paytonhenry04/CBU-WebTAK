@@ -1,0 +1,25 @@
+[Unit]
+Description=CBU Route 1 transit to TAK feeder (publishes RTA bus CoT to FreeTAKServer)
+Documentation=https://github.com/Paytonhenry04/CBU-WebTAK
+After=network-online.target docker.service cbu-ftserver.service
+Wants=network-online.target
+# PartOf makes 'systemctl stop cbu-tak.target' stop this too.
+PartOf=cbu-tak.target
+
+[Service]
+Type=simple
+User=payton
+Group=payton
+WorkingDirectory=/home/payton/TAK
+ExecStart=/home/payton/TAK/venv/bin/python3 /home/payton/TAK/transit_tak.py
+
+# No internal reconnect - exits when FreeTAKServer drops the connection.
+Restart=always
+RestartSec=10
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cbu-transit-tak
+
+[Install]
+WantedBy=cbu-tak.target

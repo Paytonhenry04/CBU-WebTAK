@@ -1,2 +1,4 @@
 fastapi
 uvicorn[standard]
+aiohttp
+gtfs-realtime-bindings

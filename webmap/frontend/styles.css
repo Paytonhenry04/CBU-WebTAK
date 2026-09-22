@@ -209,3 +209,88 @@ html, body, #map {
   color: #6b7280;
   font-size: 11px;
 }
+
+/* --- Live KRAL weather widget --- */
+#weather {
+  position: absolute;
+  top: 64px;
+  right: 12px;
+  z-index: 10;
+  width: 190px;
+  background: rgba(20, 24, 30, 0.92);
+  color: #eee;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 8px 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  font-size: 12px;
+  transition: opacity 0.3s, border-color 0.3s;
+}
+
+#weather.stale {
+  opacity: 0.65;
+  border-color: #fbbf24;
+}
+
+#weather-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+#weather-category {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+#weather-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #cbd5e1;
+}
+
+#weather-updated {
+  font-size: 10px;
+  color: #9ca3af;
+  margin-top: 4px;
+  border-top: 1px solid #334155;
+  padding-top: 4px;
+}
+
+#weather.stale #weather-updated {
+  color: #fbbf24;
+}
+
+#weather-overlay-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #334155;
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+#weather-overlay-toggle {
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  color: #cbd5e1;
+  background: #1f2937;
+  border: 1px solid #475569;
+  border-radius: 999px;
+  padding: 2px 10px;
+  cursor: pointer;
+}
+
+#weather-overlay-toggle[aria-pressed="true"] {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}

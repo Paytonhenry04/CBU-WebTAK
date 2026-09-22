@@ -30,6 +30,37 @@ function loadPlaneIcon() {
   });
 }
 
+// Top-down bus silhouette, nose-up (windshield at top) so icon-rotate works
+// the same way it does for PLANE_SVG.
+const BUS_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">' +
+  '<rect x="20" y="6" width="24" height="52" rx="6" ' +
+  'fill="#f97316" stroke="#7c2d12" stroke-width="2.5"/>' +
+  '<rect x="24" y="12" width="16" height="10" rx="2" fill="#fed7aa"/>' +
+  '<rect x="24" y="26" width="16" height="6" rx="1" fill="#7c2d12" opacity="0.5"/>' +
+  '<rect x="24" y="36" width="16" height="6" rx="1" fill="#7c2d12" opacity="0.5"/>' +
+  '<rect x="24" y="46" width="16" height="6" rx="1" fill="#7c2d12" opacity="0.5"/>' +
+  "</svg>";
+
+function loadBusIcon() {
+  return new Promise((resolve) => {
+    if (map.hasImage("bus-icon")) {
+      resolve();
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      if (!map.hasImage("bus-icon")) map.addImage("bus-icon", img);
+      resolve();
+    };
+    img.onerror = (err) => {
+      console.error("Failed to load bus icon:", err);
+      resolve();
+    };
+    img.src = "data:image/svg+xml;base64," + btoa(BUS_SVG);
+  });
+}
+
 const map = new maplibregl.Map({
   container: "map",
   style: CONFIG.TILES.STREET_STYLE_URL,
@@ -42,8 +73,100 @@ const map = new maplibregl.Map({
 
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
 
+// RainViewer's public tile API - free, keyless, CORS-open (confirmed), built
+// for exactly this kind of direct client-side map embedding, so unlike
+// weather.py/transit.py this needs no backend poller: the browser fetches
+// tiles straight from RainViewer's CDN, same as the base map style itself.
+const RAINVIEWER_META_URL = "https://api.rainviewer.com/public/weather-maps.json";
+let rainviewerHost = null;
+
+function radarTileURL(path) {
+  return `${rainviewerHost}${path}/256/{z}/{x}/{y}/2/1_1.png`;
+}
+function cloudTileURL(path) {
+  return `${rainviewerHost}${path}/256/{z}/{x}/{y}/0/0_0.png`;
+}
+
+// RainViewer only actually has imagery up to about z12 - MapLibre overzooms
+// a raster source's coarsest tile automatically past its maxzoom rather than
+// requesting (nonexistent) deeper tiles, which is what we want here.
+async function fetchRainviewerFrames() {
+  const res = await fetch(RAINVIEWER_META_URL);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const meta = await res.json();
+  rainviewerHost = meta.host;
+  const radarFrames = (meta.radar && meta.radar.past) || [];
+  const cloudFrames = (meta.satellite && meta.satellite.infrared) || [];
+  return {
+    radarTile: radarFrames.length
+      ? radarTileURL(radarFrames[radarFrames.length - 1].path)
+      : null,
+    cloudTile: cloudFrames.length
+      ? cloudTileURL(cloudFrames[cloudFrames.length - 1].path)
+      : null,
+  };
+}
+
+async function initWeatherOverlay() {
+  let radarTile = null;
+  let cloudTile = null;
+  try {
+    ({ radarTile, cloudTile } = await fetchRainviewerFrames());
+  } catch (err) {
+    console.error("Failed to fetch RainViewer metadata:", err);
+  }
+
+  if (!map.getSource("weather-radar")) {
+    map.addSource("weather-radar", {
+      type: "raster",
+      tiles: radarTile ? [radarTile] : [],
+      tileSize: 256,
+      maxzoom: 12,
+    });
+  }
+  if (!map.getLayer("weather-radar-layer")) {
+    map.addLayer({
+      id: "weather-radar-layer",
+      type: "raster",
+      source: "weather-radar",
+      layout: { visibility: "none" },
+      paint: { "raster-opacity": 0.55 },
+    });
+  }
+
+  // Cloud imagery (satellite infrared) isn't always populated on RainViewer's
+  // end - the layer just stays hidden/empty rather than erroring when it's
+  // temporarily unavailable, same "degrade, don't break" pattern as the
+  // rest of this app's data sources.
+  if (!map.getSource("weather-clouds")) {
+    map.addSource("weather-clouds", {
+      type: "raster",
+      tiles: cloudTile ? [cloudTile] : [],
+      tileSize: 256,
+      maxzoom: 12,
+    });
+  }
+  if (!map.getLayer("weather-clouds-layer")) {
+    map.addLayer({
+      id: "weather-clouds-layer",
+      type: "raster",
+      source: "weather-clouds",
+      layout: { visibility: "none" },
+      paint: { "raster-opacity": 0.4 },
+    });
+  }
+}
+
 async function addCustomLayers() {
   await loadPlaneIcon();
+  await loadBusIcon();
+  // Added first so it sits at the bottom of this app's layer stack - a
+  // backdrop under the campus/building/aircraft/bus layers, not on top of
+  // anything interactive.
+  await initWeatherOverlay();
+  // In case the toggle was clicked before this async setup finished - the
+  // layers now exist, so this applies whatever state was actually requested.
+  setWeatherOverlay(weatherOverlayOn);
 
   // Real CBU campus outline (OSM amenity=university multipolygon), not a
   // synthetic circle - the campus is several separate parcels.
@@ -207,6 +330,87 @@ async function addCustomLayers() {
     });
   }
 
+  // Route 1's real road path(s) - hidden (filtered to nothing) until a bus
+  // or stop is clicked, so all variants don't clutter the map by default.
+  if (!map.getSource("route1-shapes")) {
+    map.addSource("route1-shapes", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!map.getLayer("route1-shapes-line")) {
+    map.addLayer({
+      id: "route1-shapes-line",
+      type: "line",
+      source: "route1-shapes",
+      filter: ["==", ["get", "shape_id"], "__none__"],
+      layout: { "line-join": "round", "line-cap": "round" },
+      paint: { "line-color": "#f97316", "line-width": 4, "line-opacity": 0.75 },
+    });
+  }
+
+  // Route 1 stops - near-static, fetched once (see loadRoute1Stops below).
+  // A visible marker (white center, orange ring) rather than a flat dot.
+  if (!map.getSource("route1-stops")) {
+    map.addSource("route1-stops", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!map.getLayer("route1-stops-dot")) {
+    map.addLayer({
+      id: "route1-stops-dot",
+      type: "circle",
+      source: "route1-stops",
+      paint: {
+        "circle-radius": 6,
+        "circle-color": "#ffffff",
+        "circle-opacity": 0.9,
+        "circle-stroke-color": "#f97316",
+        "circle-stroke-width": 2.5,
+      },
+    });
+  }
+
+  // Live Route 1 buses.
+  if (!map.getSource("route1-buses")) {
+    map.addSource("route1-buses", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  // Fallback marker in case the bus icon image ever fails to load, same
+  // guard as aircraft-dot for the plane icon.
+  if (!map.getLayer("route1-bus-dot")) {
+    map.addLayer({
+      id: "route1-bus-dot",
+      type: "circle",
+      source: "route1-buses",
+      paint: {
+        "circle-radius": 7,
+        "circle-color": "#f97316",
+        "circle-stroke-color": "#7c2d12",
+        "circle-stroke-width": 1,
+      },
+    });
+  }
+  if (!map.getLayer("route1-bus-symbol")) {
+    map.addLayer({
+      id: "route1-bus-symbol",
+      type: "symbol",
+      source: "route1-buses",
+      layout: {
+        "icon-image": "bus-icon",
+        // A null bearing renders nose-up instead of erroring, rather than
+        // silently coalescing to a misleading heading.
+        "icon-rotate": ["coalesce", ["get", "bearing"], 0],
+        "icon-rotation-alignment": "map",
+        "icon-allow-overlap": true,
+        "icon-size": 0.6,
+      },
+    });
+  }
+
 }
 
 map.on("load", addCustomLayers);
@@ -292,6 +496,56 @@ map.on("click", "cbu-buildings-fill", (e) => {
     .setHTML(html)
     .addTo(map);
 });
+
+// Shows one bus's own shape_id, or (with no argument) every Route 1
+// variant at once - a stop doesn't belong to a single direction, so
+// clicking one shows the whole route instead of guessing.
+function showRouteShapes(shapeId) {
+  if (!map.getLayer("route1-shapes-line")) return;
+  map.setFilter(
+    "route1-shapes-line",
+    shapeId ? ["==", ["get", "shape_id"], shapeId] : null
+  );
+}
+
+function hideRouteShapes() {
+  if (!map.getLayer("route1-shapes-line")) return;
+  map.setFilter("route1-shapes-line", ["==", ["get", "shape_id"], "__none__"]);
+}
+
+// A bus has few enough facts (headsign, speed, id, time) that a transient
+// Popup is enough - unlike aircraft, which get the persistent details panel.
+function showBusPopup(e) {
+  const p = e.features[0].properties;
+  const speed = p.speed_mph != null && p.speed_mph !== "" ? `${p.speed_mph} mph` : "unknown";
+  const observed = p.observed_at
+    ? new Date(p.observed_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : "unknown";
+  const html =
+    `<strong>${p.headsign || "Route 1"}</strong><br>` +
+    `Speed: ${speed}<br>` +
+    `Vehicle: ${p.vehicle_id || "unknown"}<br>` +
+    `As of ${observed}`;
+  new maplibregl.Popup().setLngLat(e.lngLat).setHTML(html).addTo(map);
+  showRouteShapes(p.shape_id || null);
+}
+
+["route1-bus-symbol", "route1-bus-dot"].forEach((layer) => {
+  map.on("click", layer, showBusPopup);
+  map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
+  map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
+});
+
+map.on("click", "route1-stops-dot", (e) => {
+  const p = e.features[0].properties;
+  new maplibregl.Popup()
+    .setLngLat(e.lngLat)
+    .setHTML(`<strong>${p.name || "Route 1 stop"}</strong>`)
+    .addTo(map);
+  showRouteShapes(null); // a stop serves both directions - show the full route
+});
+map.on("mouseenter", "route1-stops-dot", () => (map.getCanvas().style.cursor = "pointer"));
+map.on("mouseleave", "route1-stops-dot", () => (map.getCanvas().style.cursor = ""));
 
 // Aircraft details render into the bottom-left panel rather than a map
 // popup, which used to sit on top of the aircraft it described.
@@ -427,7 +681,7 @@ document.getElementById("details-close").addEventListener("click", deselectAircr
   map.on("click", layer, (e) => selectAircraft(e.features[0].properties.reg));
 });
 
-// Clicking empty map (not on a plane or building) deselects.
+// Clicking empty map (not on a plane, building, bus, or stop) deselects.
 map.on("click", (e) => {
   const hits = map.queryRenderedFeatures(e.point, {
     layers: [
@@ -435,9 +689,15 @@ map.on("click", (e) => {
       "aircraft-dot",
       "aircraft-highlight",
       "cbu-buildings-fill",
+      "route1-bus-symbol",
+      "route1-bus-dot",
+      "route1-stops-dot",
     ],
   });
-  if (hits.length === 0 && selectedReg) deselectAircraft();
+  if (hits.length === 0) {
+    if (selectedReg) deselectAircraft();
+    hideRouteShapes();
+  }
 });
 
 ["cbu-buildings-fill", "aircraft-symbol", "aircraft-dot"].forEach((layer) => {
@@ -445,8 +705,24 @@ map.on("click", (e) => {
   map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
 });
 
-// --- Aircraft polling ---
+// --- Status line: combines aircraft-poll status and bus-feed status, since
+// both share the single #status element. Each side tracks its own text/warn
+// state and calls renderStatus() rather than writing statusEl directly, so
+// neither poller (1s aircraft, 15s transit) clobbers the other's half. ---
 const statusEl = document.getElementById("status");
+let aircraftStatusText = "Loading...";
+let aircraftWarn = false;
+let busStatusText = "";
+let busWarn = false;
+
+function renderStatus() {
+  statusEl.textContent = busStatusText
+    ? `${aircraftStatusText} | ${busStatusText}`
+    : aircraftStatusText;
+  statusEl.classList.toggle("warn", aircraftWarn || busWarn);
+}
+
+// --- Aircraft polling ---
 const aircraftListEl = document.getElementById("aircraft-list");
 let latestAircraft = [];
 
@@ -490,10 +766,14 @@ async function pollAircraft() {
       if (ac) detailsBody.innerHTML = aircraftDetailsHTML(ac);
       else deselectAircraft(); // went stale / landed out of coverage
     }
-    statusEl.textContent = `${data.length} aircraft via TAK - updated ${new Date().toLocaleTimeString()}`;
+    aircraftStatusText = `${data.length} aircraft via TAK - updated ${new Date().toLocaleTimeString()}`;
+    aircraftWarn = false;
+    renderStatus();
     checkTakLink();
   } catch (err) {
-    statusEl.textContent = `Connection issue: ${err.message}`;
+    aircraftStatusText = `Connection issue: ${err.message}`;
+    aircraftWarn = true;
+    renderStatus();
   }
 }
 
@@ -507,14 +787,15 @@ async function checkTakLink() {
     const age = h.seconds_since_last_cot;
     const stale = age === null || age > 60;
     if (!h.tak_connected) {
-      statusEl.textContent = "TAK link down - no CoT source";
-      statusEl.classList.add("warn");
+      aircraftStatusText = "TAK link down - no CoT source";
+      aircraftWarn = true;
     } else if (stale && h.tracked_aircraft === 0) {
-      statusEl.textContent = "TAK connected - no CoT received (is adsb_tak.py running?)";
-      statusEl.classList.add("warn");
+      aircraftStatusText = "TAK connected - no CoT received (is adsb_tak.py running?)";
+      aircraftWarn = true;
     } else {
-      statusEl.classList.remove("warn");
+      aircraftWarn = false;
     }
+    renderStatus();
   } catch (err) {
     /* status already reflects the fetch failure */
   }
@@ -522,3 +803,244 @@ async function checkTakLink() {
 
 setInterval(pollAircraft, CONFIG.POLL_MS);
 pollAircraft();
+
+// --- Weather widget ---
+const FLIGHT_CATEGORY_COLORS = {
+  VFR: "#22c55e",
+  MVFR: "#2563eb",
+  IFR: "#ef4444",
+  LIFR: "#c026d3",
+};
+
+const weatherEl = document.getElementById("weather");
+const weatherCategoryEl = document.getElementById("weather-category");
+const weatherTempEl = document.getElementById("weather-temp");
+const weatherWindEl = document.getElementById("weather-wind");
+const weatherVisEl = document.getElementById("weather-vis");
+const weatherUpdatedEl = document.getElementById("weather-updated");
+
+function formatWind(wind) {
+  if (!wind || (wind.speed_kt == null && !wind.variable)) return "Calm";
+  if (wind.speed_kt === 0) return "Calm";
+  if (wind.variable) return `Variable ${wind.speed_kt}kt`;
+  if (wind.dir_deg == null) return `${wind.speed_kt}kt`;
+  return `${wind.dir_deg}° ${wind.speed_kt}kt`;
+}
+
+function renderWeather(w) {
+  if (!w.available) {
+    weatherCategoryEl.textContent = "N/A";
+    weatherCategoryEl.style.background = "#6b7280";
+    weatherTempEl.textContent = "Weather unavailable";
+    weatherWindEl.textContent = "";
+    weatherVisEl.textContent = "";
+    weatherUpdatedEl.textContent = w.error || "";
+    weatherEl.classList.add("stale");
+    weatherEl.title = "";
+    return;
+  }
+
+  const cat = w.flight_category || "UNK";
+  weatherCategoryEl.textContent = cat;
+  weatherCategoryEl.style.background = FLIGHT_CATEGORY_COLORS[cat] || "#6b7280";
+  weatherTempEl.textContent = w.temp_c != null ? `${Math.round(w.temp_c)}°C` : "--";
+  weatherWindEl.textContent = formatWind(w.wind);
+  weatherVisEl.textContent = w.visibility_sm != null ? `${w.visibility_sm}sm vis` : "";
+
+  const asOf = w.observed_at
+    ? new Date(w.observed_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : "unknown";
+  weatherUpdatedEl.textContent = w.stale ? `As of ${asOf} (stale)` : `As of ${asOf}`;
+  weatherEl.classList.toggle("stale", w.stale);
+
+  const dewpoint = w.dewpoint_c != null ? `${Math.round(w.dewpoint_c)}°C` : "unknown";
+  const altimeter = w.altimeter_inhg != null ? `${w.altimeter_inhg} inHg` : "unknown";
+  weatherEl.title =
+    `Dewpoint: ${dewpoint}\nAltimeter: ${altimeter}\n${w.raw_metar || ""}`;
+}
+
+async function pollWeather() {
+  try {
+    const res = await fetch("/api/weather");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    renderWeather(await res.json());
+  } catch (err) {
+    console.error("Failed to poll weather:", err);
+  }
+}
+
+setInterval(pollWeather, CONFIG.WEATHER_POLL_MS);
+pollWeather();
+
+// --- Radar/clouds overlay toggle ---
+// Off by default (matches the map's existing look); polling for fresh tile
+// frames only runs while it's switched on, since nobody's looking otherwise.
+const RADAR_REFRESH_MS = 5 * 60 * 1000; // radar's own upstream cadence is ~10 min
+let weatherOverlayOn = false;
+let radarRefreshIntervalId = null;
+
+async function refreshWeatherOverlayTiles() {
+  try {
+    const { radarTile, cloudTile } = await fetchRainviewerFrames();
+    const radarSrc = map.getSource("weather-radar");
+    if (radarSrc && radarTile) radarSrc.setTiles([radarTile]);
+    const cloudSrc = map.getSource("weather-clouds");
+    if (cloudSrc && cloudTile) cloudSrc.setTiles([cloudTile]);
+  } catch (err) {
+    console.error("Failed to refresh weather overlay tiles:", err);
+  }
+}
+
+const weatherOverlayToggle = document.getElementById("weather-overlay-toggle");
+
+function setWeatherOverlay(on) {
+  weatherOverlayOn = on;
+  ["weather-radar-layer", "weather-clouds-layer"].forEach((id) => {
+    if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
+  });
+  weatherOverlayToggle.textContent = on ? "On" : "Off";
+  weatherOverlayToggle.setAttribute("aria-pressed", on ? "true" : "false");
+
+  if (on) {
+    refreshWeatherOverlayTiles();
+    if (!radarRefreshIntervalId) {
+      radarRefreshIntervalId = setInterval(refreshWeatherOverlayTiles, RADAR_REFRESH_MS);
+    }
+  } else if (radarRefreshIntervalId) {
+    clearInterval(radarRefreshIntervalId);
+    radarRefreshIntervalId = null;
+  }
+}
+
+weatherOverlayToggle.addEventListener("click", () => setWeatherOverlay(!weatherOverlayOn));
+
+// --- Route 1 bus polling ---
+async function loadRoute1Stops() {
+  try {
+    const res = await fetch(CONFIG.GEO_DATA.ROUTE1_STOPS);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const stops = await res.json();
+    const src = map.getSource("route1-stops");
+    if (!src) return;
+    src.setData({
+      type: "FeatureCollection",
+      features: stops.map((s) => ({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [s.lon, s.lat] },
+        properties: s,
+      })),
+    });
+  } catch (err) {
+    console.error("Failed to load Route 1 stops:", err);
+  }
+}
+
+// Fetched once - RTA's own feed only publishes a few shape_ids per route,
+// so this is small and near-static (route geometry doesn't change live).
+async function loadRoute1Shapes() {
+  try {
+    const res = await fetch(CONFIG.GEO_DATA.ROUTE1_SHAPES);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const src = map.getSource("route1-shapes");
+    if (src) src.setData(await res.json());
+  } catch (err) {
+    console.error("Failed to load Route 1 shapes:", err);
+  }
+}
+
+// RTA's own feed only actually moves a vehicle every ~20-25s (confirmed by
+// sampling it), far slower than aircraft CoT (~1s) - polling faster than
+// that wouldn't get fresher data, it would just re-fetch the same fix. So
+// instead each real fix is animated: busAnim holds a from/to pair per
+// vehicle, and animateBuses() interpolates between them every frame so
+// buses glide continuously between polls instead of jumping in place.
+const busAnim = {}; // vehicle_id -> {from:{lat,lon}, to:{lat,lon}, start, duration, props}
+
+function _lerpBusPos(anim, now) {
+  const t = Math.min(1, (now - anim.start) / anim.duration);
+  return {
+    lat: anim.from.lat + (anim.to.lat - anim.from.lat) * t,
+    lon: anim.from.lon + (anim.to.lon - anim.from.lon) * t,
+  };
+}
+
+let _lastBusRender = 0;
+function animateBuses(now) {
+  requestAnimationFrame(animateBuses);
+  // Throttled to ~10fps - plenty smooth for a route with a dozen-odd buses,
+  // far cheaper than rebuilding the GeoJSON source every animation frame.
+  if (now - _lastBusRender < 100) return;
+  _lastBusRender = now;
+
+  const src = map.getSource("route1-buses");
+  if (!src) return;
+  src.setData({
+    type: "FeatureCollection",
+    features: Object.values(busAnim).map((anim) => {
+      const pos = _lerpBusPos(anim, now);
+      return {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [pos.lon, pos.lat] },
+        properties: anim.props,
+      };
+    }),
+  });
+}
+requestAnimationFrame(animateBuses);
+
+async function pollTransit() {
+  try {
+    const res = await fetch("/api/transit/route1");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const now = performance.now();
+    const seen = new Set();
+
+    data.vehicles.forEach((v) => {
+      const id = v.vehicle_id || v.trip_id;
+      if (!id) return;
+      seen.add(id);
+      const existing = busAnim[id];
+      // A newly-seen bus starts at its real position, not animated in from
+      // nowhere; an existing one continues from wherever it currently is
+      // (not its old target), so a fix that arrives early never causes a
+      // backwards jump.
+      const from = existing ? _lerpBusPos(existing, now) : { lat: v.lat, lon: v.lon };
+      busAnim[id] = {
+        from,
+        to: { lat: v.lat, lon: v.lon },
+        start: now,
+        duration: CONFIG.TRANSIT_POLL_MS,
+        props: v,
+      };
+    });
+    // Drop buses no longer in the feed (off-shift, out of range, etc).
+    Object.keys(busAnim).forEach((id) => {
+      if (!seen.has(id)) delete busAnim[id];
+    });
+
+    if (!data.available) {
+      busStatusText = "bus feed unavailable";
+      busWarn = true;
+    } else if (data.stale) {
+      busStatusText = "bus feed stale";
+      busWarn = true;
+    } else if (data.vehicle_count === 0) {
+      busStatusText = "Route 1 not currently running";
+      busWarn = false;
+    } else {
+      busStatusText = `${data.vehicle_count} buses on Route 1`;
+      busWarn = false;
+    }
+    renderStatus();
+  } catch (err) {
+    busStatusText = "bus feed unavailable";
+    busWarn = true;
+    renderStatus();
+  }
+}
+
+map.on("load", loadRoute1Stops);
+map.on("load", loadRoute1Shapes);
+setInterval(pollTransit, CONFIG.TRANSIT_POLL_MS);
+pollTransit();

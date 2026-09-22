@@ -5,6 +5,11 @@
 
 const CONFIG = {
   POLL_MS: 1000,
+  WEATHER_POLL_MS: 60000,   // client poll of our own cheap cache - the 5min
+                            // NOAA refresh cadence lives backend-side in
+                            // weather.py, this just keeps "as of"/staleness
+                            // current without hitting NOAA any harder.
+  TRANSIT_POLL_MS: 15000,  // matches transit.py's own backend refresh cadence
 
   FOCAL_POINTS: {
     overview: {
@@ -40,5 +45,7 @@ const CONFIG = {
     CBU_BUILDINGS: "/api/buildings",
     CBU_CAMPUS: "/static/geo/cbu_campus.geojson",
     KRAL_AIRPORT: "/static/geo/kral_airport.geojson",
+    ROUTE1_STOPS: "/api/transit/route1/stops",
+    ROUTE1_SHAPES: "/api/transit/route1/shapes",
   },
 };

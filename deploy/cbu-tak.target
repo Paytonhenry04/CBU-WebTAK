@@ -4,7 +4,7 @@ Documentation=https://github.com/Paytonhenry04/CBU-WebTAK
 # The individual services declare PartOf= this target, which is what makes
 # "systemctl stop cbu-tak.target" stop all of them (Wants=/WantedBy= alone
 # only propagates on start, not stop).
-Wants=cbu-ftserver.service cbu-adsb-tak.service cbu-webmap.service
+Wants=cbu-ftserver.service cbu-adsb-tak.service cbu-weather-tak.service cbu-transit-tak.service cbu-webmap.service
 After=cbu-ftserver.service
 
 [Install]
