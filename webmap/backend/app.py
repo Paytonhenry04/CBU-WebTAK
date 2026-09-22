@@ -23,6 +23,8 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 import fts_listener
+import transit
+import weather
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("webmap")
@@ -44,12 +46,17 @@ async def _prune_loop():
 async def lifespan(_: FastAPI):
     poller_task = asyncio.create_task(fts_listener.run_forever())
     prune_task = asyncio.create_task(_prune_loop())
-    logger.info("Started TAK (CoT) listener and stale-aircraft pruner")
+    # transit.run_forever() only refreshes static stops/shapes now - live
+    # weather and bus positions arrive as CoT through fts_listener's own
+    # poller_task above, same as aircraft. weather.py has no loop of its own.
+    transit_task = asyncio.create_task(transit.run_forever())
+    logger.info("Started TAK (CoT) listener, stale-aircraft/bus pruner, and transit static-GTFS refresher")
     try:
         yield
     finally:
         poller_task.cancel()
         prune_task.cancel()
+        transit_task.cancel()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -114,6 +121,26 @@ async def get_buildings():
 
     buildings["overrides_applied"] = applied
     return JSONResponse(buildings)
+
+
+@app.get("/api/weather")
+async def get_weather():
+    return weather.get_state()
+
+
+@app.get("/api/transit/route1")
+async def get_route1_buses():
+    return transit.get_state()
+
+
+@app.get("/api/transit/route1/stops")
+async def get_route1_stops():
+    return transit.get_stops()
+
+
+@app.get("/api/transit/route1/shapes")
+async def get_route1_shapes():
+    return transit.get_shapes()
 
 
 @app.get("/api/health")

@@ -39,6 +39,15 @@ RECONNECT_SECONDS = 5
 # uid -> aircraft dict, built purely from CoT received from FreeTAKServer.
 AIRCRAFT_STATE: dict[str, dict] = {}
 
+# Weather (weather_tak.py) and Route 1 buses (transit_tak.py) are separate
+# TAK feeders following the same pattern as adsb_tak.py - this listener is
+# the single point that receives all of it back out of FTS, same as for
+# aircraft. Nothing in this app polls NOAA or RTA directly.
+WEATHER_STATE: dict = {}
+BUS_STATE: dict[str, dict] = {}          # vehicle_id -> bus dict
+TRANSIT_LINK_STATE: dict = {"last_seen": None, "vehicle_count": 0}
+BUS_STALE_SECONDS = 45                   # ~3x transit_tak.py's 15s poll cadence
+
 # reg -> list of {lat, lon, alt_ft, t}. Cleared on an observed on-ground ->
 # airborne transition so a trail runs from the runway to the current position.
 TRACK_STATE: dict[str, list[dict]] = {}
@@ -107,9 +116,10 @@ def _self_presence() -> bytes:
     return ET.tostring(event)
 
 
-def _parse_cot(data: bytes) -> dict | None:
-    """Turn one relayed CoT event into our aircraft dict, or None if it isn't
-    a CBU aircraft event (chat, presence, pings, other clients)."""
+def _common_fields(data: bytes):
+    """Shared XML parse + point/detail extraction for every CoT kind this
+    listener understands. Returns (uid, point, detail, lat, lon, hae) or
+    None."""
     try:
         event = ET.fromstring(data)
     except ET.ParseError:
@@ -120,21 +130,28 @@ def _parse_cot(data: bytes) -> dict | None:
     detail = event.find("detail")
     if point is None or detail is None:
         return None
+    lat, lon = point.get("lat"), point.get("lon")
+    if lat is None or lon is None:
+        return None
+    try:
+        hae = float(point.get("hae") or 0)
+    except ValueError:
+        hae = 0.0
+    try:
+        return uid, point, detail, float(lat), float(lon), hae
+    except ValueError:
+        return None
 
+
+def _parse_aircraft_cot(uid: str, detail, lat: float, lon: float, hae: float) -> dict | None:
+    """Turn one relayed CoT event into our aircraft dict, or None if it isn't
+    a CBU aircraft event (chat, presence, pings, other clients)."""
     # Require the <aircraft> detail element rather than filtering on the uid
     # prefix: our own presence CoT is uid "CBU-WEBMAP", which a prefix check
     # would happily accept and render as a phantom aircraft.
     aircraft_el = detail.find("aircraft")
     if aircraft_el is None or uid in (SELF_UID, adsb_tak.SELF_UID):
         return None
-    lat, lon = point.get("lat"), point.get("lon")
-    if lat is None or lon is None:
-        return None
-
-    try:
-        hae = float(point.get("hae") or 0)
-    except ValueError:
-        hae = 0.0
 
     course = speed_ms = 0.0
     track_el = detail.find("track")
@@ -165,12 +182,88 @@ def _parse_cot(data: bytes) -> dict | None:
         "type": ac_type,
         "owner": owner,
         "hex": hex_id,
-        "lat": float(lat),
-        "lon": float(lon),
+        "lat": lat,
+        "lon": lon,
         "alt_ft": round(hae / 0.3048),
         "speed_kt": round(speed_ms / 0.514444),
         "heading": course,
         "on_ground": on_ground,
+        "last_seen": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def _parse_weather_cot(detail) -> dict | None:
+    w = detail.find("weather")
+    if w is None:
+        return None
+
+    def s(name):
+        v = w.get(name)
+        return v if v else None
+
+    def f(name):
+        v = w.get(name)
+        try:
+            return float(v) if v else None
+        except ValueError:
+            return None
+
+    dir_deg = w.get("wind_dir_deg")
+    speed_kt = w.get("wind_speed_kt")
+    return {
+        "icao": s("icao"),
+        "flight_category": s("flight_category"),
+        "wind": {
+            "dir_deg": int(dir_deg) if dir_deg else None,
+            "variable": w.get("wind_variable") == "true",
+            "speed_kt": int(speed_kt) if speed_kt else None,
+        },
+        "visibility_sm": s("visibility_sm"),
+        "temp_c": f("temp_c"),
+        "dewpoint_c": f("dewpoint_c"),
+        "altimeter_inhg": f("altimeter_inhg"),
+        "raw_metar": s("raw_metar"),
+        "observed_at": s("observed_at"),
+        "last_seen": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def _parse_bus_cot(detail, lat: float, lon: float) -> dict | None:
+    b = detail.find("bus")
+    if b is None:
+        return None
+    vehicle_id = b.get("vehicle_id")
+    if not vehicle_id:
+        return None
+
+    def s(name):
+        v = b.get(name)
+        return v if v else None
+
+    bearing = b.get("bearing")
+    speed_mph = b.get("speed_mph")
+    return {
+        "vehicle_id": vehicle_id,
+        "trip_id": s("trip_id"),
+        "lat": lat,
+        "lon": lon,
+        "bearing": float(bearing) if bearing else None,
+        "speed_mph": int(speed_mph) if speed_mph else None,
+        "direction_id": s("direction_id"),
+        "headsign": s("headsign"),
+        "shape_id": s("shape_id"),
+        "observed_at": s("observed_at"),
+        "last_seen": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def _parse_route_status_cot(detail) -> dict | None:
+    rs = detail.find("route_status")
+    if rs is None:
+        return None
+    count = rs.get("vehicle_count")
+    return {
+        "vehicle_count": int(count) if count else 0,
         "last_seen": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -352,23 +445,53 @@ def prune_stale() -> None:
     for uid in stale:
         del AIRCRAFT_STATE[uid]
 
+    stale_buses = [
+        vid
+        for vid, b in BUS_STATE.items()
+        if (now - datetime.fromisoformat(b["last_seen"])).total_seconds() > BUS_STALE_SECONDS
+    ]
+    for vid in stale_buses:
+        del BUS_STATE[vid]
+
 
 async def _drain(rx_queue: asyncio.Queue) -> None:
     while True:
         data = await rx_queue.get()
         LINK_STATE["last_cot"] = datetime.now(timezone.utc).isoformat()
-        parsed = _parse_cot(data)
-        if not parsed:
+        common = _common_fields(data)
+        if common is None:
             continue
-        prev = AIRCRAFT_STATE.get(parsed["uid"])
-        # Default False, not True: with no prior observation (first sight or
-        # first event after a restart) we haven't *seen* it on the ground, so
-        # calling it a takeoff would wipe the trail restored from disk.
-        was_on_ground = prev["on_ground"] if prev else False
-        _update_flight(parsed, was_on_ground)
-        parsed["flight"] = FLIGHT_STATE.get(parsed["reg"])
-        AIRCRAFT_STATE[parsed["uid"]] = parsed
-        _update_track(parsed, was_on_ground)
+        uid, _point, detail, lat, lon, hae = common
+
+        aircraft = _parse_aircraft_cot(uid, detail, lat, lon, hae)
+        if aircraft:
+            prev = AIRCRAFT_STATE.get(aircraft["uid"])
+            # Default False, not True: with no prior observation (first
+            # sight or first event after a restart) we haven't *seen* it on
+            # the ground, so calling it a takeoff would wipe the trail
+            # restored from disk.
+            was_on_ground = prev["on_ground"] if prev else False
+            _update_flight(aircraft, was_on_ground)
+            aircraft["flight"] = FLIGHT_STATE.get(aircraft["reg"])
+            AIRCRAFT_STATE[aircraft["uid"]] = aircraft
+            _update_track(aircraft, was_on_ground)
+            continue
+
+        weather = _parse_weather_cot(detail)
+        if weather:
+            WEATHER_STATE.clear()
+            WEATHER_STATE.update(weather)
+            continue
+
+        bus = _parse_bus_cot(detail, lat, lon)
+        if bus:
+            BUS_STATE[bus["vehicle_id"]] = bus
+            continue
+
+        route_status = _parse_route_status_cot(detail)
+        if route_status:
+            TRANSIT_LINK_STATE.update(route_status)
+            continue
 
 
 async def _save_loop() -> None:
