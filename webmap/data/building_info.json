@@ -1,23 +1,26 @@
 {
   "_example": {
     "name": "Leave as is",
-    "type": "CBU Facilites, Housing, Dinning, CBU Atheltics, Parking",
+    "type": "Academic, CBU Facilities, Housing, Dining, CBU Athletics, Parking",
     "description": "Delete this entry. Each real entry is keyed by the osm_id shown in that building's popup on the map. All three fields are optional - a blank one just leaves whatever OpenStreetMap had. Keys starting with _ are ignored."
   },
+  "_ignore": [
+    "609836056"
+  ],
   "234178045": {
     "name": "Annie Gabriel Library",
-    "type": "",
-    "description": ""
+    "type": "Academic",
+    "description": "CBU's main campus library, housing the university's research collections and student study space."
   },
   "8589348": {
     "name": "Aquatic Center",
-    "type": "",
-    "description": ""
+    "type": "CBU Athletics",
+    "description": "Campus aquatics facility used for swimming and CBU athletics programs."
   },
   "8589347": {
     "name": "Athletic Training",
-    "type": "",
-    "description": ""
+    "type": "CBU Athletics",
+    "description": "Athletic training facility supporting CBU's sports programs."
   },
   "233663000": {
     "name": "Baker's",
@@ -26,128 +29,128 @@
   },
   "233662998": {
     "name": "Bourns Engineering Lab",
-    "type": "",
+    "type": "Academic",
     "description": ""
   },
   "619322276": {
     "name": "Business Building",
-    "type": "",
-    "description": ""
+    "type": "Academic",
+    "description": "The Park Business Building, home to CBU's business programs along with the Career Center and the Innovators Auditorium."
   },
   "234178044": {
     "name": "Central Plant",
-    "type": "",
-    "description": ""
+    "type": "CBU Facilities",
+    "description": "Campus central utility plant."
   },
   "954138793": {
     "name": "The Palm",
-    "type": "University",
-    "description": ""
+    "type": "Dining",
+    "description": "On-campus dining venue."
   },
   "619322274": {
     "name": "College of Engineering",
-    "type": "",
-    "description": ""
+    "type": "Academic",
+    "description": "The Troesh Engineering Building, home to CBU's College of Engineering."
   },
   "233663658": {
     "name": "College Park Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "233663659": {
     "name": "College Park Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "233663660": {
     "name": "College Park Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "233663661": {
     "name": "College Park Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "233662993": {
     "name": "CBU College of Architecture",
-    "type": "",
-    "description": ""
+    "type": "Academic",
+    "description": "Home to CBU's architecture program."
   },
   "609631909": {
     "name": "Events Center",
-    "type": "",
-    "description": ""
+    "type": "CBU Athletics",
+    "description": "The Fowler Events Center, CBU's arena for athletics events and large campus gatherings."
   },
   "234178055": {
     "name": "CBU Facilities & Maintenance Services",
-    "type": "",
-    "description": ""
+    "type": "CBU Facilities",
+    "description": "Facilities and Planning Services, including campus maintenance and operations."
   },
   "234178042": {
     "name": "Hawkins Music Building",
-    "type": "",
-    "description": ""
+    "type": "Academic",
+    "description": "Home to CBU's music program."
   },
   "619322270": {
     "name": "Hawthorne House",
-    "type": "House",
+    "type": "CBU Facilities",
     "description": ""
   },
   "234178047": {
     "name": "James Building (North) 2-Story",
-    "type": "University",
-    "description": ""
+    "type": "Academic",
+    "description": "CBU academic building."
   },
   "8589349": {
     "name": "Lambeth / Nursing Annex",
-    "type": "",
-    "description": ""
+    "type": "Academic",
+    "description": "The Lambeth Building and Nursing Annex, home to CBU's nursing programs."
   },
   "234178051": {
     "name": "Lancer Arms Apartments",
-    "type": "",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "234178052": {
     "name": "Lancer Arms Apartments",
-    "type": "",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "234178053": {
     "name": "Lancer Arms Apartments",
-    "type": "",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "234178050": {
     "name": "Lancer Arms North Offices",
-    "type": "",
-    "description": ""
+    "type": "CBU Facilities",
+    "description": "Office building housing International Admissions, the International Center and the Office of Student Success."
   },
   "233663041": {
     "name": "Lancer Palms",
-    "type": "University",
+    "type": "CBU Facilities",
     "description": "The Lancer Palms building serves as an essential off-campus administrative hub, providing centralized university operational services including the CBU Human Resources Department, the Safety Services dispatch office, and Facilities Planning and Operations."
   },
   "233663010": {
     "name": "Mail & Shipping Services",
-    "type": "",
-    "description": ""
+    "type": "CBU Facilities",
+    "description": "Campus mail and shipping services."
   },
   "234178054": {
     "name": "Mission Hall",
-    "type": "",
-    "description": ""
+    "type": "Academic",
+    "description": "CBU academic building."
   },
   "234178063": {
     "name": "Multi-Purpose Class Room",
-    "type": "",
-    "description": ""
+    "type": "Academic",
+    "description": "Multi-purpose classroom building."
   },
   "346122018": {
     "name": "Recreation Center",
-    "type": "",
-    "description": ""
+    "type": "CBU Athletics",
+    "description": "Student recreation center with fitness and recreational facilities."
   },
   "609836055": {
     "name": "Berri Brothers",
@@ -156,288 +159,288 @@
   },
   "234178040": {
     "name": "Simmons Hall",
-    "type": "College",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus residence hall for CBU students."
   },
   "234178041": {
     "name": "Smith Hall",
-    "type": "College",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus residence hall for CBU students."
   },
   "954127145": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127146": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127147": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127148": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127149": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127150": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127151": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127152": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127153": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127154": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127155": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127156": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127157": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127158": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127159": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127160": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127161": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954127162": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954138788": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954138789": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954138790": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "954138791": {
     "name": "The Cottages",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus cottage-style student housing."
   },
   "238218625": {
     "name": "Tower Hall",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus residence hall for CBU students."
   },
   "954468680": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468681": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468682": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468683": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468684": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468685": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468686": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468687": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468688": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468689": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468690": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468691": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468692": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468693": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468694": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468695": {
     "name": "University Place Apartments",
-    "type": "Apartments",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "954468696": {
     "name": "University Place Apartments",
-    "type": "Residential",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "234178049": {
     "name": "Van Dyne Gym",
-    "type": "",
-    "description": ""
+    "type": "CBU Athletics",
+    "description": "Campus gymnasium used for CBU athletics."
   },
   "234178043": {
     "name": "Wallace Theatre",
-    "type": "",
-    "description": ""
+    "type": "Academic",
+    "description": "Campus theater used for CBU performing arts productions."
   },
   "619322267": {
     "name": "Wellness Center",
-    "type": "",
-    "description": ""
+    "type": "CBU Facilities",
+    "description": "Student health facility housing the Health Center and the Counseling Center."
   },
   "233663002": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "Community Life Lounge",
+    "type": "CBU Facilities",
+    "description": "Houses the Community Life office."
   },
   "233663004": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "Monte's Mexican Grill & Campus Store",
+    "type": "Dining",
+    "description": "Houses the El Monte Grill dining venue and the campus store."
   },
   "233663007": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "CBU Card Services, Lancer Landing Coffe, & ShakeSmart",
+    "type": "CBU Facilities",
+    "description": "Houses University Card Services along with the Lancers Landing coffee bar and Shake Smart."
   },
   "233663014": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "The Point",
+    "type": "Housing",
+    "description": "On-campus student housing."
   },
   "233663016": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "The Point",
+    "type": "Housing",
+    "description": "On-campus student housing."
   },
   "233663019": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "The Point",
+    "type": "Housing",
+    "description": "On-campus student housing."
   },
   "233663021": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "The Point",
+    "type": "Housing",
+    "description": "On-campus student housing."
   },
   "233663023": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "The Point",
+    "type": "Housing",
+    "description": "On-campus student housing."
   },
   "233663024": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "The Point",
+    "type": "Housing",
+    "description": "On-campus student housing."
   },
   "233663026": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "The Point",
+    "type": "Housing",
+    "description": "On-campus student housing."
   },
   "234178046": {
     "name": "Yeager Building",
-    "type": "",
+    "type": "Academic",
     "description": "Yeager Center serves as CBU's primary student services and administrative hub, offering essential enrollment and campus life services that include the Financial Aid Office, the Student Accounts Office, the Office of the Registrar, the Academic Advising Center, Classrooms, and the university's main executive leadership suites."
   },
   "234178048": {
     "name": "James Building (South) 4-Story",
-    "type": "",
-    "description": ""
+    "type": "Academic",
+    "description": "CBU academic building."
   },
   "234178061": {
     "name": "",
@@ -450,39 +453,39 @@
     "description": ""
   },
   "238218610": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "The Village",
+    "type": "Housing",
+    "description": "Student housing complex, which also contains the Village Classrooms and the Residence Life and Housing Services office."
   },
   "238218611": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "The Village",
+    "type": "Housing",
+    "description": "Student housing complex, which also contains the Village Classrooms and the Residence Life and Housing Services office."
   },
   "238218613": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "The Village",
+    "type": "Housing",
+    "description": "Student housing complex, which also contains the Village Classrooms and the Residence Life and Housing Services office."
   },
   "238218615": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "The Village",
+    "type": "Housing",
+    "description": "Student housing complex, which also contains the Village Classrooms and the Residence Life and Housing Services office."
   },
   "238218618": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "The Village",
+    "type": "Housing",
+    "description": "Student housing complex, which also contains the Village Classrooms and the Residence Life and Housing Services office."
   },
   "238218622": {
     "name": "Tower Hall",
-    "type": "",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus residence hall for CBU students."
   },
   "238218626": {
     "name": "Tower Hall",
-    "type": "",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus residence hall for CBU students."
   },
   "893815175": {
     "name": "",
@@ -970,14 +973,14 @@
     "description": ""
   },
   "958304244": {
-    "name": "",
-    "type": "University",
-    "description": ""
+    "name": "CBU Facilities & Maintenance Services",
+    "type": "CBU Facilities",
+    "description": "Facilities and Planning Services, including campus maintenance and operations."
   },
   "958304245": {
-    "name": "",
-    "type": "Retail",
-    "description": ""
+    "name": "Spiritial Life",
+    "type": "CBU Facilities",
+    "description": "Houses CBU's Spiritual Life offices."
   },
   "958304246": {
     "name": "",
@@ -996,43 +999,43 @@
   },
   "958305759": {
     "name": "University Place Apartments",
-    "type": "University",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "958305760": {
     "name": "University Place Apartments",
-    "type": "University",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "958305761": {
     "name": "University Place Apartments",
-    "type": "University",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "958305762": {
     "name": "University Place Apartments",
-    "type": "University",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "958305763": {
     "name": "University Place Apartments",
-    "type": "University",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "958306018": {
-    "name": "",
-    "type": "University",
-    "description": ""
+    "name": "Bathroom at The Village",
+    "type": "Housing",
+    "description": "Restroom facility serving The Village student housing complex."
   },
   "958306019": {
-    "name": "",
-    "type": "University",
-    "description": ""
+    "name": "The Village",
+    "type": "Housing",
+    "description": "Student housing complex, which also contains the Village Classrooms and the Residence Life and Housing Services office."
   },
   "958306020": {
-    "name": "",
-    "type": "University",
-    "description": ""
+    "name": "The Village",
+    "type": "Housing",
+    "description": "Student housing complex, which also contains the Village Classrooms and the Residence Life and Housing Services office."
   },
   "958306539": {
     "name": "",
@@ -1085,19 +1088,19 @@
     "description": ""
   },
   "958971565": {
-    "name": "",
-    "type": "University",
-    "description": ""
+    "name": "Briscos and Fireside",
+    "type": "Dining",
+    "description": "On-campus dining venue."
   },
   "958971751": {
     "name": "University Place Apartments",
-    "type": "University",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "958971752": {
     "name": "University Place Apartments",
-    "type": "University",
-    "description": ""
+    "type": "Housing",
+    "description": "On-campus apartment housing for CBU students."
   },
   "959571395": {
     "name": "",
@@ -1110,8 +1113,8 @@
     "description": ""
   },
   "1012294900": {
-    "name": "",
-    "type": "",
-    "description": ""
+    "name": "Safety Services Checkpoint",
+    "type": "CBU Facilities",
+    "description": "Campus Safety Services checkpoint; the building also houses Student Accounts."
   }
 }

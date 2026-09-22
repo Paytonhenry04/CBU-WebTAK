@@ -47,10 +47,19 @@ def main() -> None:
 
     result = {k: v for k, v in existing.items() if k.startswith("_")}
 
-    added = 0
+    # osm_ids deliberately removed from the file. Without this the script
+    # can't tell "never added" from "deleted on purpose", so it silently
+    # resurrects entries that were removed (e.g. neighbouring businesses
+    # that aren't CBU buildings).
+    ignored = {str(i) for i in existing.get("_ignore", [])}
+
+    added = skipped = 0
     for feature in sorted(buildings, key=sort_key):
         props = feature["properties"]
         key = str(props["osm_id"])
+        if key in ignored:
+            skipped += 1
+            continue
         if key in existing:
             result[key] = existing[key]  # preserve edits verbatim
             continue
@@ -69,7 +78,8 @@ def main() -> None:
 
     INFO.write_text(json.dumps(result, indent=2) + "\n")
     total = len([k for k in result if not k.startswith("_")])
-    print(f"{INFO}: {total} entries ({added} newly added, {total - added} preserved)")
+    note = f", {skipped} skipped via _ignore" if skipped else ""
+    print(f"{INFO}: {total} entries ({added} newly added, {total - added} preserved{note})")
 
 
 if __name__ == "__main__":
