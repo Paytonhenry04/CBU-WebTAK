@@ -11,9 +11,10 @@
    No login, public.
 
 (Both are HTTPS via a Caddy reverse proxy - see `deploy/HTTPS.md` for setup
-and `deploy/Caddyfile` for the config. The old `http://...:5000` and
-`http://...:8090` URLs stop working once the plain-HTTP ports are closed,
-step 7 of that setup.)
+and `deploy/Caddyfile` for the config. Live with production Let's Encrypt
+certificates as of 2026-09-22. The old `http://...:5000` and
+`http://...:8090` URLs still work for now - step 7 of that setup, closing
+the plain-HTTP ports, hasn't been done yet.)
 
 ## Starting everything (recommended: run as services)
 

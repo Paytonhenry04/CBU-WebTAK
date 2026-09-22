@@ -13,12 +13,11 @@
 		protocols h1 h2
 	}
 
-	# STAGING: leave this ENABLED for the first run. Let's Encrypt allows
-	# only 5 failed validations per hostname per hour, and port-forwarding
-	# problems burn through that fast. Staging has no meaningful limits, so
-	# all the debugging is free. Comment it out once staging issues cleanly,
-	# then reload to get real certificates.
-	acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+	# STAGING (disabled): staging issued cleanly for all three hostnames on
+	# 2026-09-22, confirmed via journalctl. Now on production certificates.
+	# Re-enable this line first if you ever need to debug Caddyfile changes
+	# again, to avoid burning the 5-failures-per-hour production limit.
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
 
 	# Optional: add `email you@example.com` for Let's Encrypt expiry
 	# warnings. Deliberately left out rather than assumed.
