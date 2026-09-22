@@ -3,12 +3,17 @@
 ## The two web pages
 
 1. **FTS Admin Dashboard** - server health/status only, no map.
-   `http://paytons-mc-server.duckdns.org:5000/`
+   `https://fts.paytons-mc-server.duckdns.org/`
    Login: `admin` / (see `ftserver/.env`, or ask Payton - not written here on purpose)
 
 2. **CBU/KRAL Live Web Map** - the actual live aircraft map.
-   `http://paytons-mc-server.duckdns.org:8090/`
+   `https://paytons-mc-server.duckdns.org/`
    No login, public.
+
+(Both are HTTPS via a Caddy reverse proxy - see `deploy/HTTPS.md` for setup
+and `deploy/Caddyfile` for the config. The old `http://...:5000` and
+`http://...:8090` URLs stop working once the plain-HTTP ports are closed,
+step 7 of that setup.)
 
 ## Starting everything (recommended: run as services)
 

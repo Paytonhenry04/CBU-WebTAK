@@ -1,0 +1,68 @@
+# CBU WebTAK reverse proxy.
+#
+# Canonical copy lives here in git; install.sh copies it to
+# /etc/caddy/Caddyfile. It must be a copy, not a symlink - /home/payton is
+# mode 0750, so the unprivileged 'caddy' user cannot traverse into this
+# directory and would fail to read the file in place.
+
+{
+	# HTTP/3 is UDP/443. Forwarding UDP through this router is an untested
+	# unknown and h1+h2 is plenty here, so it's disabled - one less failure
+	# mode on the Socket.IO long-polling path.
+	servers {
+		protocols h1 h2
+	}
+
+	# STAGING: leave this ENABLED for the first run. Let's Encrypt allows
+	# only 5 failed validations per hostname per hour, and port-forwarding
+	# problems burn through that fast. Staging has no meaningful limits, so
+	# all the debugging is free. Comment it out once staging issues cleanly,
+	# then reload to get real certificates.
+	acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+
+	# Optional: add `email you@example.com` for Let's Encrypt expiry
+	# warnings. Deliberately left out rather than assumed.
+}
+
+# --- Web map: public, no login, the demo URL -----------------------------
+# All frontend calls are relative and its two external assets (jsdelivr,
+# openfreemap) are already https, so this converts with zero mixed content.
+paytons-mc-server.duckdns.org {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8090
+}
+
+# --- FreeTAKServer admin dashboard ---------------------------------------
+fts.paytons-mc-server.duckdns.org {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:5000 {
+		# If Flask ever emits an absolute Location, rewrite the scheme so
+		# the login flow can't bounce the browser back down to http://.
+		header_down Location "^http://" "https://"
+	}
+}
+
+# --- FreeTAKServer REST + Socket.IO API ----------------------------------
+# The dashboard's gauges are driven by a Socket.IO connection the BROWSER
+# opens directly here - a different origin from the dashboard - pinned to
+# HTTP long-polling by the allow_upgrades=False patch in compose.yaml.
+# Long-polling holds a GET open for up to 25s, so nothing here may cut a
+# request short or buffer the response.
+api.paytons-mc-server.duckdns.org {
+	reverse_proxy 127.0.0.1:19023 {
+		# Stream responses straight through. Engine.IO polling replies
+		# carry a normal Content-Length and wouldn't trip Caddy's
+		# auto-detection of streaming responses.
+		flush_interval -1
+
+		transport http {
+			# No upstream deadline: a poll held open for 25s must not be
+			# mistaken for a stalled backend.
+			read_timeout 0
+			write_timeout 0
+			dial_timeout 10s
+		}
+	}
+	# No `encode` here on purpose - compressing a long-poll response can
+	# delay delivery behind the encoder's buffer, and the payloads are tiny.
+}

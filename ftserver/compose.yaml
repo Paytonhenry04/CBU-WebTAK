@@ -74,23 +74,26 @@ services:
     # file but not the missing parent dir, so the UI 500s on every request
     # until this dir exists. mkdir it before handing off to the real entrypoint.
     #
-    # FTS_IP below is the public hostname (needed so the browser's own
-    # Socket.IO connection, baked into index.html as {{ip}}:{{port}}, can
-    # reach the API once 19023 is forwarded through the router). But this
-    # container's own server-side proxy calls (login, mission, etc.) also use
-    # FTS_IP, and going out to the public hostname and back in relies on the
-    # router supporting NAT hairpin, which isn't guaranteed. extra_hosts below
-    # overrides that one hostname inside this container only, pointing it
-    # straight at freetakserver's static taknet IP instead.
+    # FTS_IP below is the hostname the browser's own Socket.IO connection
+    # (baked into index.html as {{protocol}}://{{ip}}:{{port}}) uses to
+    # reach the API - now https on Caddy's api.* site (see deploy/Caddyfile),
+    # not the core container directly. This container's own server-side
+    # proxy calls (login, mission, etc.) use the same FTS_IP/PORT/PROTO, and
+    # going out to the public hostname and back in relies on the router
+    # supporting NAT hairpin, which isn't guaranteed. extra_hosts below
+    # overrides that one hostname inside this container only, pointing it at
+    # the host's taknet gateway IP (172.28.0.1, fixed by the pinned subnet
+    # below - unlike the host's own LAN IP, which is DHCP) where Caddy
+    # listens on 443 and proxies on to the real API.
     command: sh -c "mkdir -p /home/freetak/data && exec /home/freetak/docker-run.sh"
     extra_hosts:
-      - "paytons-mc-server.duckdns.org:172.28.0.2"
+      - "api.paytons-mc-server.duckdns.org:172.28.0.1"
     volumes:
       - free-tak-ui-db:/home/freetak/:Z,rw
     environment:
-      FTS_IP: "paytons-mc-server.duckdns.org"
-      FTS_API_PORT: "19023"
-      FTS_API_PROTO: "http"
+      FTS_IP: "api.paytons-mc-server.duckdns.org"
+      FTS_API_PORT: "443"
+      FTS_API_PROTO: "https"
       FTS_UI_EXPOSED_IP: "freetakserver-ui"
       FTS_MAP_EXPOSED_IP: "127.0.0.1"
       FTS_MAP_PORT: "8000"

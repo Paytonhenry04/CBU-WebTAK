@@ -55,6 +55,27 @@ echo
 echo "==> TAK link check"
 curl -s http://127.0.0.1:8090/api/health || echo "(not answering yet - give it a few seconds)"
 echo
+
+# --- Reverse proxy (independent of cbu-tak.target on purpose: TLS
+# termination and cert renewal must survive "systemctl stop cbu-tak.target",
+# a routine maintenance command - see deploy/Caddyfile for the full reasoning
+# and deploy/HTTPS.md for the setup this depends on: ports 80/443 forwarded,
+# DNS records, and the ftserver/compose.yaml FTS_IP/PORT/PROTO change). -----
+if command -v caddy >/dev/null 2>&1; then
+  echo "==> Installing Caddyfile"
+  # This must be a copy, not a symlink: /home/payton is mode 0750, so the
+  # unprivileged 'caddy' user cannot traverse into it to follow a symlink.
+  install -m 644 -o root -g root "$HERE/Caddyfile" /etc/caddy/Caddyfile
+  caddy validate --config /etc/caddy/Caddyfile
+  systemctl enable caddy
+  # reload, not restart: graceful config swap, no dropped connections, no
+  # re-read of certificate state.
+  systemctl reload caddy || systemctl start caddy
+  echo "Caddy: $(systemctl is-active caddy)"
+else
+  echo "!! caddy not installed - reverse proxy / HTTPS skipped."
+  echo "   See deploy/HTTPS.md to set it up."
+fi
 echo
 cat <<'EOT'
 Done.
