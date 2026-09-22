@@ -7,8 +7,9 @@
    Login: `admin` / (see `ftserver/.env`, or ask Payton - not written here on purpose)
 
 2. **CBU/KRAL Live Web Map** - the actual live aircraft map.
-   `https://paytons-mc-server.duckdns.org/`
-   No login, public.
+   `https://webtak.paytons-mc-server.duckdns.org/`
+   No login, public. (The bare `https://paytons-mc-server.duckdns.org/`
+   redirects here permanently, for anyone with the old URL bookmarked.)
 
 (Both are HTTPS via a Caddy reverse proxy - see `deploy/HTTPS.md` for setup
 and `deploy/Caddyfile` for the config. Live with production Let's Encrypt

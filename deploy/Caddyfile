@@ -26,9 +26,14 @@
 # --- Web map: public, no login, the demo URL -----------------------------
 # All frontend calls are relative and its two external assets (jsdelivr,
 # openfreemap) are already https, so this converts with zero mixed content.
-paytons-mc-server.duckdns.org {
+webtak.paytons-mc-server.duckdns.org {
 	encode zstd gzip
 	reverse_proxy 127.0.0.1:8090
+}
+
+# Anyone with the old bare-domain URL bookmarked gets sent to the new one.
+paytons-mc-server.duckdns.org {
+	redir https://webtak.paytons-mc-server.duckdns.org{uri} permanent
 }
 
 # --- FreeTAKServer admin dashboard ---------------------------------------
