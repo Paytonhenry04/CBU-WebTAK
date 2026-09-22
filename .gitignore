@@ -5,3 +5,4 @@ __pycache__/
 ftserver/.env
 PROJECT_STATUS.md
 webmap/track_history.json
+webmap/flight_state.json

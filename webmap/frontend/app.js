@@ -307,9 +307,38 @@ function aircraftDetailsHTML(p) {
     row("Altitude", `${p.alt_ft} ft`) +
     row("Speed", `${p.speed_kt} kt`) +
     row("Heading", heading) +
-    row("Departure/Arrival", '<em>no public source</em>') +
+    flightRows(p.flight) +
     row("Pilot", '<em>no public source</em>')
   );
+}
+
+// Departure/arrival are derived from observed ground<->airborne transitions
+// matched to the nearest aerodrome - not a filed flight plan, so they're
+// labelled as observed and left blank rather than guessed when unknown.
+function flightRows(flight) {
+  const row = (label, value) =>
+    `<div class="detail-row"><span>${label}</span><span>${value}</span></div>`;
+  const place = (ap) => (ap ? ap.code || ap.name || "unknown" : null);
+  const time = (t) =>
+    t ? new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+
+  if (!flight) return row("Departed", "<em>not seen departing</em>");
+
+  const dep = place(flight.departure);
+  const arr = place(flight.arrival);
+  let html = dep
+    ? row("Departed", `${dep} <span class="muted">${time(flight.departure_time)}</span>`)
+    : row("Departed", "<em>not seen departing</em>");
+
+  if (arr) {
+    html += row("Arrived", `${arr} <span class="muted">${time(flight.arrival_time)}</span>`);
+  } else if (dep) {
+    html += row("Arrived", "<em>in flight</em>");
+  }
+  if (flight.touch_and_go > 0) {
+    html += row("Touch &amp; go", flight.touch_and_go);
+  }
+  return html;
 }
 
 // Fetches and renders the selected aircraft's flight trail.
