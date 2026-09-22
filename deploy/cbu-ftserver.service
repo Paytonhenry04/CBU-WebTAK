@@ -11,12 +11,11 @@ Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/home/payton/TAK/ftserver
 
-# 'up -d' creates the containers if they don't exist and starts them if they
-# do. Note: if compose.yaml has changed, this recreates them, which on
-# docker-compose v1 can hit the known "KeyError: 'ContainerConfig'" bug - the
-# workaround is 'docker-compose stop && docker-compose rm -f <svc>' then start
-# again. See webmap/README.md.
-ExecStart=/usr/bin/docker-compose -f compose.yaml up -d
+# Wrapper rather than a bare 'docker-compose up -d': when compose.yaml has
+# changed, compose recreates the containers, and docker-compose v1 crashes
+# with KeyError: 'ContainerConfig' doing so, leaving the stack down. The
+# script retries after an explicit rm -f, which creates them cleanly.
+ExecStart=/home/payton/TAK/deploy/ftserver-up.sh
 
 # 'stop', deliberately not 'down': stopping leaves the containers in place so
 # restarting doesn't recreate them (see the bug above). Named volumes hold the
