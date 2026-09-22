@@ -11,7 +11,12 @@ Type=simple
 User=payton
 Group=payton
 WorkingDirectory=/home/payton/TAK/webmap/backend
-ExecStart=/home/payton/TAK/venv/bin/uvicorn app:app --host 0.0.0.0 --port 8090
+# --proxy-headers is already uvicorn's default, and --forwarded-allow-ips
+# defaults to 127.0.0.1 (verified against this exact venv's uvicorn 0.53.0).
+# Both made explicit now that Caddy proxies to this from loopback, so
+# StaticFiles' redirects pick up X-Forwarded-Proto and don't downgrade to
+# http:// under HTTPS - not a real behavior change, just documenting it.
+ExecStart=/home/payton/TAK/venv/bin/uvicorn app:app --host 0.0.0.0 --port 8090 --proxy-headers --forwarded-allow-ips=127.0.0.1
 
 # The TAK listener reconnects on its own, so this mainly covers hard
 # crashes and reboots.
