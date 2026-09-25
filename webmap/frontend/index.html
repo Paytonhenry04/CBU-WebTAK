@@ -23,15 +23,31 @@
       <button data-focal="kral">KRAL Airport</button>
     </div>
     <div id="tilt-hint">Hold middle mouse + drag to tilt for 3D buildings</div>
+    <!-- Legend for the building progress colours - off along with the
+         colouring itself in app.js (cbu-buildings-fill).
     <div id="legend">
       <div class="legend-heading">Campus buildings</div>
       <div class="legend-row"><span class="swatch" style="background:#facc15"></span>name + description</div>
       <div class="legend-row"><span class="swatch" style="background:#ef4444"></span>needs description</div>
       <div class="legend-row"><span class="swatch" style="background:#111827"></span>needs a name</div>
     </div>
+    -->
+    <div id="tracker-tabs">
+      <button data-tracker="planes" class="active">Planes</button>
+      <button data-tracker="buses">Buses</button>
+    </div>
     <div id="aircraft-list-wrap">
       <div id="aircraft-list-heading">Active Flights</div>
       <div id="aircraft-list">None currently tracked</div>
+    </div>
+    <div id="bus-list-wrap" class="hidden">
+      <div id="bus-list-heading">Route 1 Buses</div>
+      <div id="bus-list">None currently tracked</div>
+      <div id="bus-pager" class="hidden">
+        <button id="bus-prev" title="Previous page">&lsaquo; Prev</button>
+        <span id="bus-page">1 / 1</span>
+        <button id="bus-next" title="Next page">Next &rsaquo;</button>
+      </div>
     </div>
     <div id="status">Loading...</div>
   </div>
@@ -52,10 +68,6 @@
       <span id="weather-vis">--</span>
     </div>
     <div id="weather-updated">Loading weather...</div>
-    <div id="weather-overlay-row">
-      <span>Radar &amp; clouds</span>
-      <button id="weather-overlay-toggle" type="button" aria-pressed="false">Off</button>
-    </div>
   </div>
 
   <script src="/config.js"></script>

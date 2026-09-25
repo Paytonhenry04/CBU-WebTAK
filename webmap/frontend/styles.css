@@ -54,9 +54,26 @@ html, body, #map {
   border-color: #3b82f6;
 }
 
-#aircraft-list-wrap {
+#tracker-tabs {
+  display: flex;
+  gap: 4px;
   border-top: 1px solid #334155;
   padding-top: 6px;
+}
+
+#tracker-tabs button {
+  flex: 1;
+}
+
+#aircraft-list-wrap,
+#bus-list-wrap {
+  border-top: 1px solid #334155;
+  padding-top: 6px;
+}
+
+#aircraft-list-wrap.hidden,
+#bus-list-wrap.hidden {
+  display: none;
 }
 
 #aircraft-list-heading {
@@ -69,8 +86,6 @@ html, body, #map {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 160px;
-  overflow-y: auto;
 }
 
 .aircraft-row {
@@ -91,6 +106,61 @@ html, body, #map {
 .aircraft-row.selected {
   background: #166534;
   border-color: #22c55e;
+}
+
+#bus-list-heading {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 4px;
+}
+
+#bus-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bus-row {
+  background: #0f172a;
+  color: #eee;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bus-row:hover {
+  background: #1e293b;
+}
+
+.bus-row.selected {
+  background: #7c2d12;
+  border-color: #f97316;
+}
+
+#bus-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+#bus-pager.hidden {
+  display: none;
+}
+
+#controls #bus-pager button {
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+#controls #bus-pager button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 #status {
@@ -213,7 +283,7 @@ html, body, #map {
 /* --- Live KRAL weather widget --- */
 #weather {
   position: absolute;
-  top: 64px;
+  top: 132px;
   right: 12px;
   z-index: 10;
   width: 190px;
@@ -264,33 +334,4 @@ html, body, #map {
 
 #weather.stale #weather-updated {
   color: #fbbf24;
-}
-
-#weather-overlay-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid #334155;
-  font-size: 11px;
-  color: #cbd5e1;
-}
-
-#weather-overlay-toggle {
-  font: inherit;
-  font-size: 10px;
-  font-weight: 700;
-  color: #cbd5e1;
-  background: #1f2937;
-  border: 1px solid #475569;
-  border-radius: 999px;
-  padding: 2px 10px;
-  cursor: pointer;
-}
-
-#weather-overlay-toggle[aria-pressed="true"] {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
 }
