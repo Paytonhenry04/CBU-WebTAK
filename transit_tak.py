@@ -244,7 +244,9 @@ class TransitSender(pytak.Worker):
                 )
             asyncio.create_task(static_refresh_loop(session, self._logger))
 
+            watchdog = adsb_tak.TxStallWatchdog(self.queue, self._logger)
             while True:
+                watchdog.check()
                 try:
                     now = asyncio.get_event_loop().time()
                     if now - last_presence > PRESENCE_SECONDS:

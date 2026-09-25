@@ -5,6 +5,7 @@ Public data only (airplanes.live). Part of the ~/TAK project.
 """
 
 import asyncio
+import os
 from configparser import ConfigParser
 from datetime import datetime, timezone, timedelta
 import xml.etree.ElementTree as ET
@@ -40,6 +41,35 @@ PRESENCE_SECONDS = 120     # how often to re-announce ourselves to the server
 
 def iso(dt):
     return dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+
+class TxStallWatchdog:
+    """Exit the feeder when FreeTAKServer has silently stopped reading from it.
+
+    FTS sometimes keeps a reconnected client's socket open but never reads it
+    again (seen 2026-09-25: transit_tak's socket backed up ~1MB while it kept
+    logging "Sent 16 buses", and the web map got nothing for 30 min). No
+    exception ever fires in that state, so systemd's Restart=always never
+    kicks in. The only visible symptom is pytak's outbound queue staying full
+    - in a healthy link the TXWorker drains it immediately. Checked once per
+    poll cycle; several full checks in a row means a dead link, so exit and
+    let systemd reconnect from scratch.
+    """
+
+    def __init__(self, queue, logger, limit=4):
+        self._queue = queue
+        self._logger = logger
+        self._limit = limit
+        self._strikes = 0
+
+    def check(self):
+        self._strikes = self._strikes + 1 if self._queue.full() else 0
+        if self._strikes >= self._limit:
+            self._logger.error(
+                "TX queue full for %d polls in a row - FTS stopped reading, exiting to reconnect",
+                self._strikes,
+            )
+            os._exit(1)
 
 
 def make_presence():
@@ -170,8 +200,10 @@ async def fetch_cbu_aircraft(session):
 class ADSBSender(pytak.Worker):
     async def run(self):
         last_presence = 0.0
+        watchdog = TxStallWatchdog(self.queue, self._logger)
         async with aiohttp.ClientSession() as session:
             while True:
+                watchdog.check()
                 try:
                     now = asyncio.get_event_loop().time()
                     if now - last_presence > PRESENCE_SECONDS:
