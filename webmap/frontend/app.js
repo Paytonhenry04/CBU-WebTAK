@@ -31,7 +31,7 @@ function loadPlaneIcon() {
 }
 
 // Top-down bus silhouette, nose-up (windshield at top) so icon-rotate works
-// the same way it does for PLANE_SVG.
+// the same way it does for PLANE_SVG - this is the 2D (zoomed-out) shape.
 const BUS_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">' +
   '<rect x="20" y="6" width="24" height="52" rx="6" ' +
@@ -61,6 +61,49 @@ function loadBusIcon() {
   });
 }
 
+// Buses render as a small 3D box (fill-extrusion), same technique as the
+// campus buildings, rather than a flat icon - this builds that box's
+// footprint: a real-world-sized rectangle (roughly bus-sized) centered on
+// the bus's position and rotated to its heading.
+const BUS_LENGTH_M = 16;   // slightly larger than a real ~40ft bus, for visibility
+const BUS_WIDTH_M = 3.4;
+const BUS_3D_MINZOOM = 16.5; // 2D dot/icon below this, 3D box at/above it
+const METERS_PER_DEG_LAT = 111320;
+
+// The 3D box: four height bands sharing one footprint (see busPolygon()),
+// not one solid-color slab - dark chassis, orange body, glassy windows,
+// light roof. fill-extrusion can't texture a single volume, so a real-ish
+// look means stacking a few flat-colored slices instead.
+const BUS_BAND_LAYERS = [
+  { id: "route1-bus-wheels", base: 0, height: 0.4, color: "#1f2937" },
+  { id: "route1-bus-body", base: 0.4, height: 2.6, color: "#f97316" },
+  { id: "route1-bus-windows", base: 2.6, height: 3.3, color: "#7dd3fc" },
+  { id: "route1-bus-roof", base: 3.3, height: 4.5, color: "#e2e8f0" },
+];
+const BUS_2D_LAYERS = ["route1-bus-dot", "route1-bus-symbol"];
+const BUS_CLICKABLE_LAYERS = [...BUS_2D_LAYERS, ...BUS_BAND_LAYERS.map((b) => b.id)];
+
+function busPolygon(lat, lon, bearingDeg) {
+  const theta = (bearingDeg * Math.PI) / 180;
+  const halfLen = BUS_LENGTH_M / 2;
+  const halfWid = BUS_WIDTH_M / 2;
+  // Local (right, forward) offsets for each corner, forward = the bus's nose.
+  const corners = [
+    [-halfWid, halfLen],
+    [halfWid, halfLen],
+    [halfWid, -halfLen],
+    [-halfWid, -halfLen],
+  ];
+  const metersPerDegLon = METERS_PER_DEG_LAT * Math.cos((lat * Math.PI) / 180);
+  const ring = corners.map(([right, forward]) => {
+    const east = right * Math.cos(theta) + forward * Math.sin(theta);
+    const north = -right * Math.sin(theta) + forward * Math.cos(theta);
+    return [lon + east / metersPerDegLon, lat + north / METERS_PER_DEG_LAT];
+  });
+  ring.push(ring[0]); // close the ring
+  return ring;
+}
+
 const map = new maplibregl.Map({
   container: "map",
   style: CONFIG.TILES.STREET_STYLE_URL,
@@ -73,100 +116,9 @@ const map = new maplibregl.Map({
 
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
 
-// RainViewer's public tile API - free, keyless, CORS-open (confirmed), built
-// for exactly this kind of direct client-side map embedding, so unlike
-// weather.py/transit.py this needs no backend poller: the browser fetches
-// tiles straight from RainViewer's CDN, same as the base map style itself.
-const RAINVIEWER_META_URL = "https://api.rainviewer.com/public/weather-maps.json";
-let rainviewerHost = null;
-
-function radarTileURL(path) {
-  return `${rainviewerHost}${path}/256/{z}/{x}/{y}/2/1_1.png`;
-}
-function cloudTileURL(path) {
-  return `${rainviewerHost}${path}/256/{z}/{x}/{y}/0/0_0.png`;
-}
-
-// RainViewer only actually has imagery up to about z12 - MapLibre overzooms
-// a raster source's coarsest tile automatically past its maxzoom rather than
-// requesting (nonexistent) deeper tiles, which is what we want here.
-async function fetchRainviewerFrames() {
-  const res = await fetch(RAINVIEWER_META_URL);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const meta = await res.json();
-  rainviewerHost = meta.host;
-  const radarFrames = (meta.radar && meta.radar.past) || [];
-  const cloudFrames = (meta.satellite && meta.satellite.infrared) || [];
-  return {
-    radarTile: radarFrames.length
-      ? radarTileURL(radarFrames[radarFrames.length - 1].path)
-      : null,
-    cloudTile: cloudFrames.length
-      ? cloudTileURL(cloudFrames[cloudFrames.length - 1].path)
-      : null,
-  };
-}
-
-async function initWeatherOverlay() {
-  let radarTile = null;
-  let cloudTile = null;
-  try {
-    ({ radarTile, cloudTile } = await fetchRainviewerFrames());
-  } catch (err) {
-    console.error("Failed to fetch RainViewer metadata:", err);
-  }
-
-  if (!map.getSource("weather-radar")) {
-    map.addSource("weather-radar", {
-      type: "raster",
-      tiles: radarTile ? [radarTile] : [],
-      tileSize: 256,
-      maxzoom: 12,
-    });
-  }
-  if (!map.getLayer("weather-radar-layer")) {
-    map.addLayer({
-      id: "weather-radar-layer",
-      type: "raster",
-      source: "weather-radar",
-      layout: { visibility: "none" },
-      paint: { "raster-opacity": 0.55 },
-    });
-  }
-
-  // Cloud imagery (satellite infrared) isn't always populated on RainViewer's
-  // end - the layer just stays hidden/empty rather than erroring when it's
-  // temporarily unavailable, same "degrade, don't break" pattern as the
-  // rest of this app's data sources.
-  if (!map.getSource("weather-clouds")) {
-    map.addSource("weather-clouds", {
-      type: "raster",
-      tiles: cloudTile ? [cloudTile] : [],
-      tileSize: 256,
-      maxzoom: 12,
-    });
-  }
-  if (!map.getLayer("weather-clouds-layer")) {
-    map.addLayer({
-      id: "weather-clouds-layer",
-      type: "raster",
-      source: "weather-clouds",
-      layout: { visibility: "none" },
-      paint: { "raster-opacity": 0.4 },
-    });
-  }
-}
-
 async function addCustomLayers() {
   await loadPlaneIcon();
   await loadBusIcon();
-  // Added first so it sits at the bottom of this app's layer stack - a
-  // backdrop under the campus/building/aircraft/bus layers, not on top of
-  // anything interactive.
-  await initWeatherOverlay();
-  // In case the toggle was clicked before this async setup finished - the
-  // layers now exist, so this applies whatever state was actually requested.
-  setWeatherOverlay(weatherOverlayOn);
 
   // Real CBU campus outline (OSM amenity=university multipolygon), not a
   // synthetic circle - the campus is several separate parcels.
@@ -207,28 +159,29 @@ async function addCustomLayers() {
       minzoom: 15,
       paint: {
         "fill-extrusion-height": ["get", "render_height"],
-        // Progress colouring for filling in data/building_info.json:
+        "fill-extrusion-color": "#cbd5e1",
+        // Progress colouring for filling in data/building_info.json - off now
+        // that every building is named and described. Swap it back in for
+        // the plain color above to see what still needs data:
         //   black  = campus building with no name yet
         //   red    = named, but still missing a description
         //   yellow = name and description both done
-        // Buildings around campus that aren't in our data are drawn by the
-        // base map style in its own grey, and are left alone.
-        "fill-extrusion-color": [
-          "case",
-          [
-            "any",
-            ["==", ["get", "name"], null],
-            ["==", ["get", "name"], ""],
-          ],
-          "#111827",
-          [
-            "all",
-            ["!=", ["get", "description"], null],
-            ["!=", ["get", "description"], ""],
-          ],
-          "#facc15",
-          "#ef4444",
-        ],
+        // "fill-extrusion-color": [
+        //   "case",
+        //   [
+        //     "any",
+        //     ["==", ["get", "name"], null],
+        //     ["==", ["get", "name"], ""],
+        //   ],
+        //   "#111827",
+        //   [
+        //     "all",
+        //     ["!=", ["get", "description"], null],
+        //     ["!=", ["get", "description"], ""],
+        //   ],
+        //   "#facc15",
+        //   "#ef4444",
+        // ],
         "fill-extrusion-opacity": 0.85,
       },
     });
@@ -362,6 +315,9 @@ async function addCustomLayers() {
       id: "route1-stops-dot",
       type: "circle",
       source: "route1-stops",
+      // Hidden by default - all 134 stops at once is clutter. selectBus()/
+      // deselectBus() toggle this to "visible" only while a bus is selected.
+      layout: { visibility: "none" },
       paint: {
         "circle-radius": 6,
         "circle-color": "#ffffff",
@@ -372,22 +328,56 @@ async function addCustomLayers() {
     });
   }
 
-  // Live Route 1 buses.
+  // Live Route 1 buses. Two sources for the same buses: a real-world-sized
+  // rectangle (see busPolygon()) rendered as a 3D box, same technique as the
+  // campus buildings - and a point, rendered as a fixed-pixel-size dot. The
+  // box alone isn't reliably visible: a real bus (12m) is sub-pixel at most
+  // zooms this app actually uses, the same reason buildings need minzoom 15
+  // - but buses, like aircraft, need to be visible at any zoom. The dot
+  // guarantees that; the box adds real 3D depth once you're zoomed in or
+  // tilted, mirroring aircraft-dot/aircraft-symbol's fallback pattern.
   if (!map.getSource("route1-buses")) {
     map.addSource("route1-buses", {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
     });
   }
-  // Fallback marker in case the bus icon image ever fails to load, same
-  // guard as aircraft-dot for the plane icon.
+  if (!map.getSource("route1-bus-points")) {
+    map.addSource("route1-bus-points", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  // Selection ring - not a recolored bus, same approach as aircraft-highlight:
+  // a separate ring under whichever bus is selected, at any zoom (2D or 3D).
+  if (!map.getLayer("route1-bus-highlight")) {
+    map.addLayer({
+      id: "route1-bus-highlight",
+      type: "circle",
+      source: "route1-bus-points",
+      filter: ["==", ["get", "vehicle_id"], ""],
+      paint: {
+        "circle-radius": 16,
+        "circle-color": "#22c55e",
+        "circle-opacity": 0.25,
+        "circle-stroke-color": "#22c55e",
+        "circle-stroke-width": 2.5,
+      },
+    });
+  }
+  // Fallback dot in case the bus icon image ever fails to load, same guard
+  // as aircraft-dot for the plane icon.
   if (!map.getLayer("route1-bus-dot")) {
     map.addLayer({
       id: "route1-bus-dot",
       type: "circle",
-      source: "route1-buses",
+      source: "route1-bus-points",
+      // 2D below the 3D box's threshold - above it, the real-scale box is
+      // finally big enough on screen to read clearly, so these step aside
+      // instead of doubling up on top of it.
+      maxzoom: BUS_3D_MINZOOM,
       paint: {
-        "circle-radius": 7,
+        "circle-radius": 4,
         "circle-color": "#f97316",
         "circle-stroke-color": "#7c2d12",
         "circle-stroke-width": 1,
@@ -398,7 +388,8 @@ async function addCustomLayers() {
     map.addLayer({
       id: "route1-bus-symbol",
       type: "symbol",
-      source: "route1-buses",
+      source: "route1-bus-points",
+      maxzoom: BUS_3D_MINZOOM,
       layout: {
         "icon-image": "bus-icon",
         // A null bearing renders nose-up instead of erroring, rather than
@@ -406,10 +397,29 @@ async function addCustomLayers() {
         "icon-rotate": ["coalesce", ["get", "bearing"], 0],
         "icon-rotation-alignment": "map",
         "icon-allow-overlap": true,
-        "icon-size": 0.6,
+        "icon-size": 0.5,
       },
     });
   }
+
+  // Four height-banded fill-extrusion layers (dark chassis, orange body,
+  // glassy windows, light roof) - see BUS_BAND_LAYERS near the top of this
+  // file for why this beats one solid-color slab.
+  BUS_BAND_LAYERS.forEach(({ id, base, height, color }) => {
+    if (map.getLayer(id)) return;
+    map.addLayer({
+      id,
+      type: "fill-extrusion",
+      source: "route1-buses",
+      minzoom: BUS_3D_MINZOOM,
+      paint: {
+        "fill-extrusion-base": base,
+        "fill-extrusion-height": height,
+        "fill-extrusion-color": color,
+        "fill-extrusion-opacity": 0.95,
+      },
+    });
+  });
 
 }
 
@@ -473,6 +483,18 @@ document.querySelectorAll("#focal-buttons button").forEach((btn) => {
   });
 });
 
+// --- Tracker tabs: show one quick-view list at a time, expanding the panel
+// as needed instead of scrolling within a fixed-height list. ---
+document.querySelectorAll("#tracker-tabs button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#tracker-tabs button").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    const tracker = btn.dataset.tracker;
+    document.getElementById("aircraft-list-wrap").classList.toggle("hidden", tracker !== "planes");
+    document.getElementById("bus-list-wrap").classList.toggle("hidden", tracker !== "buses");
+  });
+});
+
 // --- Click popups ---
 map.on("click", "cbu-buildings-fill", (e) => {
   const p = e.features[0].properties;
@@ -527,10 +549,10 @@ function showBusPopup(e) {
     `Vehicle: ${p.vehicle_id || "unknown"}<br>` +
     `As of ${observed}`;
   new maplibregl.Popup().setLngLat(e.lngLat).setHTML(html).addTo(map);
-  showRouteShapes(p.shape_id || null);
+  selectBus(p.vehicle_id);
 }
 
-["route1-bus-symbol", "route1-bus-dot"].forEach((layer) => {
+BUS_CLICKABLE_LAYERS.forEach((layer) => {
   map.on("click", layer, showBusPopup);
   map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
   map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
@@ -689,14 +711,13 @@ map.on("click", (e) => {
       "aircraft-dot",
       "aircraft-highlight",
       "cbu-buildings-fill",
-      "route1-bus-symbol",
-      "route1-bus-dot",
+      ...BUS_CLICKABLE_LAYERS,
       "route1-stops-dot",
     ],
   });
   if (hits.length === 0) {
     if (selectedReg) deselectAircraft();
-    hideRouteShapes();
+    if (selectedBusId) deselectBus();
   }
 });
 
@@ -872,48 +893,6 @@ async function pollWeather() {
 setInterval(pollWeather, CONFIG.WEATHER_POLL_MS);
 pollWeather();
 
-// --- Radar/clouds overlay toggle ---
-// Off by default (matches the map's existing look); polling for fresh tile
-// frames only runs while it's switched on, since nobody's looking otherwise.
-const RADAR_REFRESH_MS = 5 * 60 * 1000; // radar's own upstream cadence is ~10 min
-let weatherOverlayOn = false;
-let radarRefreshIntervalId = null;
-
-async function refreshWeatherOverlayTiles() {
-  try {
-    const { radarTile, cloudTile } = await fetchRainviewerFrames();
-    const radarSrc = map.getSource("weather-radar");
-    if (radarSrc && radarTile) radarSrc.setTiles([radarTile]);
-    const cloudSrc = map.getSource("weather-clouds");
-    if (cloudSrc && cloudTile) cloudSrc.setTiles([cloudTile]);
-  } catch (err) {
-    console.error("Failed to refresh weather overlay tiles:", err);
-  }
-}
-
-const weatherOverlayToggle = document.getElementById("weather-overlay-toggle");
-
-function setWeatherOverlay(on) {
-  weatherOverlayOn = on;
-  ["weather-radar-layer", "weather-clouds-layer"].forEach((id) => {
-    if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
-  });
-  weatherOverlayToggle.textContent = on ? "On" : "Off";
-  weatherOverlayToggle.setAttribute("aria-pressed", on ? "true" : "false");
-
-  if (on) {
-    refreshWeatherOverlayTiles();
-    if (!radarRefreshIntervalId) {
-      radarRefreshIntervalId = setInterval(refreshWeatherOverlayTiles, RADAR_REFRESH_MS);
-    }
-  } else if (radarRefreshIntervalId) {
-    clearInterval(radarRefreshIntervalId);
-    radarRefreshIntervalId = null;
-  }
-}
-
-weatherOverlayToggle.addEventListener("click", () => setWeatherOverlay(!weatherOverlayOn));
-
 // --- Route 1 bus polling ---
 async function loadRoute1Stops() {
   try {
@@ -972,21 +951,133 @@ function animateBuses(now) {
   if (now - _lastBusRender < 100) return;
   _lastBusRender = now;
 
-  const src = map.getSource("route1-buses");
-  if (!src) return;
-  src.setData({
+  const polySrc = map.getSource("route1-buses");
+  const pointSrc = map.getSource("route1-bus-points");
+  if (!polySrc || !pointSrc) return;
+
+  const positions = Object.values(busAnim).map((anim) => ({
+    pos: _lerpBusPos(anim, now),
+    props: anim.props,
+  }));
+
+  polySrc.setData({
     type: "FeatureCollection",
-    features: Object.values(busAnim).map((anim) => {
-      const pos = _lerpBusPos(anim, now);
-      return {
-        type: "Feature",
-        geometry: { type: "Point", coordinates: [pos.lon, pos.lat] },
-        properties: anim.props,
-      };
-    }),
+    features: positions.map(({ pos, props }) => ({
+      type: "Feature",
+      // A null bearing draws the box facing north instead of erroring,
+      // rather than silently coalescing to a misleading heading.
+      geometry: { type: "Polygon", coordinates: [busPolygon(pos.lat, pos.lon, props.bearing ?? 0)] },
+      properties: props,
+    })),
+  });
+  pointSrc.setData({
+    type: "FeatureCollection",
+    features: positions.map(({ pos, props }) => ({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [pos.lon, pos.lat] },
+      properties: props,
+    })),
   });
 }
 requestAnimationFrame(animateBuses);
+
+// --- Bus quick-view list + selection (mirrors the aircraft list/selection:
+// one selected at a time, list rows and map both drive the same state). ---
+const busListEl = document.getElementById("bus-list");
+let latestBuses = [];
+let selectedBusId = null;
+
+const BUS_PAGE_SIZE = 5;
+let busPage = 0;
+const busPagerEl = document.getElementById("bus-pager");
+const busPageEl = document.getElementById("bus-page");
+const busPrevEl = document.getElementById("bus-prev");
+const busNextEl = document.getElementById("bus-next");
+
+// Stable order, so a bus doesn't hop between pages on every 15s refresh.
+function sortedBuses(vehicles) {
+  return [...vehicles].sort(
+    (a, b) =>
+      (a.headsign || "").localeCompare(b.headsign || "") ||
+      String(a.vehicle_id).localeCompare(String(b.vehicle_id))
+  );
+}
+
+function renderBusList(vehicles) {
+  const pages = Math.max(1, Math.ceil(vehicles.length / BUS_PAGE_SIZE));
+  busPage = Math.min(Math.max(busPage, 0), pages - 1); // fleet can shrink between polls
+  busPagerEl.classList.toggle("hidden", pages <= 1);
+  busPageEl.textContent = `${busPage + 1} / ${pages}`;
+  busPrevEl.disabled = busPage === 0;
+  busNextEl.disabled = busPage >= pages - 1;
+
+  if (vehicles.length === 0) {
+    busListEl.textContent = "None currently tracked";
+    return;
+  }
+  busListEl.innerHTML = "";
+  sortedBuses(vehicles)
+    .slice(busPage * BUS_PAGE_SIZE, (busPage + 1) * BUS_PAGE_SIZE)
+    .forEach((b) => {
+      const row = document.createElement("button");
+      row.className = "bus-row" + (b.vehicle_id === selectedBusId ? " selected" : "");
+      row.dataset.vehicleId = b.vehicle_id;
+      row.textContent = b.headsign || `Route 1 #${b.vehicle_id}`;
+      row.addEventListener("click", () => selectBus(b.vehicle_id));
+      busListEl.appendChild(row);
+    });
+}
+
+busPrevEl.addEventListener("click", () => {
+  busPage -= 1;
+  renderBusList(latestBuses);
+});
+busNextEl.addEventListener("click", () => {
+  busPage += 1;
+  renderBusList(latestBuses);
+});
+
+// Drives the highlight ring, same approach as aircraft's setHighlight() -
+// a separate ring under the bus rather than recoloring the bus itself,
+// which also means it works identically in both 2D and 3D mode.
+function setBusHighlight(vehicleId) {
+  if (!map.getLayer("route1-bus-highlight")) return;
+  map.setFilter("route1-bus-highlight", ["==", ["get", "vehicle_id"], vehicleId || ""]);
+}
+
+function setStopsVisible(visible) {
+  if (!map.getLayer("route1-stops-dot")) return;
+  map.setLayoutProperty("route1-stops-dot", "visibility", visible ? "visible" : "none");
+}
+
+function selectBus(vehicleId) {
+  if (selectedBusId === vehicleId) {
+    deselectBus();
+    return;
+  }
+  const bus = latestBuses.find((b) => b.vehicle_id === vehicleId);
+  if (!bus) return;
+
+  selectedBusId = vehicleId;
+  setBusHighlight(vehicleId);
+  setStopsVisible(true);
+  showRouteShapes(bus.shape_id || null);
+  // Past BUS_3D_MINZOOM, so selecting a bus actually shows its 3D box.
+  map.easeTo({ center: [bus.lon, bus.lat], zoom: 17, duration: 1200 });
+
+  // Clicked on the map, the bus may be on another page of the list - flip to it.
+  const idx = sortedBuses(latestBuses).findIndex((b) => b.vehicle_id === vehicleId);
+  busPage = Math.floor(idx / BUS_PAGE_SIZE);
+  renderBusList(latestBuses);
+}
+
+function deselectBus() {
+  selectedBusId = null;
+  setBusHighlight(null);
+  setStopsVisible(false);
+  hideRouteShapes();
+  document.querySelectorAll(".bus-row.selected").forEach((el) => el.classList.remove("selected"));
+}
 
 async function pollTransit() {
   try {
@@ -1018,6 +1109,12 @@ async function pollTransit() {
     Object.keys(busAnim).forEach((id) => {
       if (!seen.has(id)) delete busAnim[id];
     });
+
+    latestBuses = data.vehicles;
+    renderBusList(data.vehicles);
+    if (selectedBusId && !data.vehicles.some((b) => b.vehicle_id === selectedBusId)) {
+      deselectBus(); // went stale / dropped out of the feed
+    }
 
     if (!data.available) {
       busStatusText = "bus feed unavailable";
