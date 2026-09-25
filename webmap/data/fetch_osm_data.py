@@ -18,6 +18,13 @@ HEADERS = {"User-Agent": "cbu-tak-webmap/1.0 (research)"}
 # (Overpass area id = 3600000000 + relation id)
 CBU_AREA_ID = 3613218766
 CBU_RELATION_ID = 13218766
+# CBU's Health Science Campus (3532 Monroe St, Lot 25 + its ~6 buildings) is a
+# separate OSM parcel, way 143181604 "College of Health Science" - outside
+# the main campus relation, so it has to be pulled in explicitly.
+# (Overpass area id = 2400000000 + way id)
+HSC_WAY_ID = 143181604
+HSC_AREA_ID = 2400000000 + HSC_WAY_ID
+INFO_PATH = Path(__file__).parent / "building_info.json"
 # Riverside Municipal Airport (KRAL) aerodrome boundary
 KRAL_WAY_ID = 127837011
 # Search origin, matching KRAL_LAT/KRAL_LON/SEARCH_RADIUS_NM in adsb_tak.py
@@ -90,15 +97,31 @@ def building_feature(el):
     }
 
 
+def ignored_ids():
+    """osm_ids in building_info.json's _ignore list - footprints inside the
+    campus boundary that aren't CBU buildings (e.g. private houses)."""
+    try:
+        return {str(i) for i in json.loads(INFO_PATH.read_text()).get("_ignore", [])}
+    except (OSError, json.JSONDecodeError):
+        return set()
+
+
 def fetch_cbu_buildings():
     query = (
         "[out:json][timeout:80];"
         f"area({CBU_AREA_ID})->.a;"
-        '(way["building"](area.a);relation["building"](area.a););'
+        f"area({HSC_AREA_ID})->.h;"
+        '(way["building"](area.a);relation["building"](area.a);'
+        'way["building"](area.h);relation["building"](area.h););'
         "out geom;"
     )
     data = overpass(query)
-    features = [f for el in data["elements"] if (f := building_feature(el))]
+    skip = ignored_ids()
+    features = [
+        f
+        for el in data["elements"]
+        if (f := building_feature(el)) and str(f["properties"]["osm_id"]) not in skip
+    ]
     fc = {"type": "FeatureCollection", "features": features}
     out_path = DATA_DIR / "cbu_buildings.geojson"
     out_path.write_text(json.dumps(fc))
@@ -125,6 +148,10 @@ def fetch_campus_boundary():
     ]
     if not rings:
         raise RuntimeError("CBU relation had no outer rings with geometry")
+
+    hsc = overpass(f"[out:json][timeout:50];way(id:{HSC_WAY_ID});out geom;")["elements"]
+    if hsc and hsc[0].get("geometry"):
+        rings.append(way_ring(hsc[0]))
 
     feature = {
         "type": "Feature",

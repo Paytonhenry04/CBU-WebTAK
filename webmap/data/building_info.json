@@ -5,7 +5,27 @@
     "description": "Delete this entry. Each real entry is keyed by the osm_id shown in that building's popup on the map. All three fields are optional - a blank one just leaves whatever OpenStreetMap had. Keys starting with _ are ignored."
   },
   "_ignore": [
-    "609836056"
+    "893815175",
+    "893815176",
+    "893815177",
+    "893815178",
+    "893815179",
+    "893815180",
+    "893815181",
+    "893815182",
+    "893815183",
+    "893815184",
+    "893815185",
+    "893815186",
+    "893815187",
+    "893815188",
+    "893815189",
+    "893815191",
+    "893815192",
+    "893815193",
+    "893815194",
+    "893815195",
+    "959571395"
   ],
   "234178045": {
     "name": "Annie Gabriel Library",
@@ -25,12 +45,12 @@
   "233663000": {
     "name": "Baker's",
     "type": "Fast food",
-    "description": ""
+    "description": "Baker's Drive-Thru fast food restaurant."
   },
   "233662998": {
-    "name": "Bourns Engineering Lab",
+    "name": "CAVAD Film Lab – CFLM",
     "type": "Academic",
-    "description": ""
+    "description": "Film lab for the College of Architecture, Visual Arts and Design (CAVAD)."
   },
   "619322276": {
     "name": "Business Building",
@@ -95,7 +115,7 @@
   "619322270": {
     "name": "Hawthorne House",
     "type": "CBU Facilities",
-    "description": ""
+    "description": "Historic Swiss Chalet-style grove home built in 1889-90 for gentleman farmer Archibald C. E. Hawthorne, on Monroe Street in the Colony area. The student-built Lancer Farms and Gardens sit beside it."
   },
   "234178047": {
     "name": "James Building (North) 2-Story",
@@ -155,7 +175,7 @@
   "609836055": {
     "name": "Berri Brothers",
     "type": "Gas Station",
-    "description": ""
+    "description": "Gas station and convenience store."
   },
   "234178040": {
     "name": "Simmons Hall",
@@ -448,9 +468,9 @@
     "description": "On-campus student housing community."
   },
   "234178062": {
-    "name": "The Colony",
-    "type": "Housing",
-    "description": "On-campus student housing community."
+    "name": "Lancers Outdoor Athletic Complex",
+    "type": "CBU Athletics",
+    "description": "Baseball / Softball Clubhouse."
   },
   "238218610": {
     "name": "The Village",
@@ -487,109 +507,9 @@
     "type": "Housing",
     "description": "On-campus residence hall for CBU students."
   },
-  "893815175": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
-  "893815176": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
-  "893815177": {
-    "name": "",
-    "type": "Garage",
-    "description": ""
-  },
-  "893815178": {
-    "name": "",
-    "type": "Garage",
-    "description": ""
-  },
-  "893815179": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
-  "893815180": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
-  "893815181": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
-  "893815182": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
-  "893815183": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
-  "893815184": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
-  "893815185": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
-  "893815186": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
-  "893815187": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
-  "893815188": {
-    "name": "",
-    "type": "Garage",
-    "description": ""
-  },
-  "893815189": {
-    "name": "",
-    "type": "Garage",
-    "description": ""
-  },
   "893815190": {
     "name": "",
     "type": "",
-    "description": ""
-  },
-  "893815191": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
-  "893815192": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
-  "893815193": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
-  "893815194": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
-  "893815195": {
-    "name": "",
-    "type": "House",
     "description": ""
   },
   "893815196": {
@@ -808,9 +728,9 @@
     "description": "On-campus student housing community."
   },
   "957975986": {
-    "name": "The Colony",
-    "type": "Housing",
-    "description": "On-campus student housing community."
+    "name": "Wellness Center",
+    "type": "CBU Facilities",
+    "description": "Student health facility housing the Health Center and the Counseling Center."
   },
   "958250298": {
     "name": "The Colony",
@@ -838,14 +758,14 @@
     "description": "Support structure (e.g. laundry, mail, trash enclosure) within The Colony student housing community."
   },
   "958289334": {
-    "name": "The Colony",
-    "type": "Housing",
-    "description": "On-campus student housing community."
+    "name": "Wellness Center",
+    "type": "CBU Facilities",
+    "description": "Student health facility housing the Health Center and the Counseling Center."
   },
   "958289335": {
-    "name": "The Colony",
-    "type": "Housing",
-    "description": "On-campus student housing community."
+    "name": "Wellness Center",
+    "type": "CBU Facilities",
+    "description": "Student health facility housing the Health Center and the Counseling Center."
   },
   "958297614": {
     "name": "The Colony",
@@ -888,9 +808,9 @@
     "description": "On-campus student housing community."
   },
   "958297871": {
-    "name": "The Colony",
-    "type": "Housing",
-    "description": "Support structure (e.g. laundry, mail, trash enclosure) within The Colony student housing community."
+    "name": "Lancers Outdoor Athletic Complex",
+    "type": "CBU Athletics",
+    "description": "Baseball / Softball Clubhouse."
   },
   "958297872": {
     "name": "The Colony",
@@ -903,24 +823,24 @@
     "description": "Support structure (e.g. laundry, mail, trash enclosure) within The Colony student housing community."
   },
   "958297874": {
-    "name": "The Colony",
-    "type": "Housing",
-    "description": "Support structure (e.g. laundry, mail, trash enclosure) within The Colony student housing community."
+    "name": "Lancers Outdoor Athletic Complex",
+    "type": "CBU Athletics",
+    "description": "Baseball / Softball Clubhouse."
   },
   "958297875": {
-    "name": "The Colony",
-    "type": "Housing",
-    "description": "Support structure (e.g. laundry, mail, trash enclosure) within The Colony student housing community."
+    "name": "Lancers Outdoor Athletic Complex",
+    "type": "CBU Athletics",
+    "description": "Baseball / Softball Clubhouse."
   },
   "958297876": {
-    "name": "The Colony",
-    "type": "Housing",
-    "description": "Support structure (e.g. laundry, mail, trash enclosure) within The Colony student housing community."
+    "name": "Lancers Outdoor Athletic Complex",
+    "type": "CBU Athletics",
+    "description": "Baseball / Softball Clubhouse."
   },
   "958297877": {
-    "name": "",
-    "type": "University",
-    "description": ""
+    "name": "Lancers Outdoor Athletic Complex",
+    "type": "CBU Athletics",
+    "description": "Baseball / Softball Clubhouse."
   },
   "958297878": {
     "name": "The Colony",
@@ -993,9 +913,9 @@
     "description": "Storage for campus golf carts and Conferences and Events equipment."
   },
   "958304248": {
-    "name": "The Colony",
-    "type": "Housing",
-    "description": "On-campus student housing community."
+    "name": "Business Building",
+    "type": "Academic",
+    "description": "The Park Business Building, home to CBU's business programs along with the Career Center and the Innovators Auditorium."
   },
   "958305759": {
     "name": "University Place Apartments",
@@ -1102,19 +1022,49 @@
     "type": "Housing",
     "description": "On-campus apartment housing for CBU students."
   },
-  "959571395": {
-    "name": "",
-    "type": "House",
-    "description": ""
-  },
   "1012294897": {
-    "name": "",
+    "name": "Parking Structure",
     "type": "Parking",
-    "description": ""
+    "description": "A 4 stoey parking garage used for comuter students as well as guests on event days"
   },
   "1012294900": {
     "name": "Safety Services Checkpoint",
     "type": "CBU Facilities",
     "description": "Campus Safety Services checkpoint; the building also houses Student Accounts."
+  },
+  "609836056": {
+    "name": "Berri Brothers",
+    "type": "Gas Station",
+    "description": "Gas station and convenience store."
+  },
+  "887615067": {
+    "name": "Health Science Campus – HSCC",
+    "type": "Academic",
+    "description": "Part of CBU's 9-acre Health Science Campus at 3532 Monroe Street, home of the College of Health Science, with offices, classrooms, labs and a restaurant."
+  },
+  "958297613": {
+    "name": "Health Science Campus – HSCC",
+    "type": "Academic",
+    "description": "Part of CBU's 9-acre Health Science Campus at 3532 Monroe Street, home of the College of Health Science, with offices, classrooms, labs and a restaurant."
+  },
+  "959570431": {
+    "name": "Health Science Campus – HSCC",
+    "type": "Academic",
+    "description": "Part of CBU's 9-acre Health Science Campus at 3532 Monroe Street, home of the College of Health Science, with offices, classrooms, labs and a restaurant."
+  },
+  "959570432": {
+    "name": "Health Science Campus – HSCC",
+    "type": "Academic",
+    "description": "Part of CBU's 9-acre Health Science Campus at 3532 Monroe Street, home of the College of Health Science, with offices, classrooms, labs and a restaurant."
+  },
+  "959570433": {
+    "name": "Health Science Campus – HSCC",
+    "type": "Academic",
+    "description": "Part of CBU's 9-acre Health Science Campus at 3532 Monroe Street, home of the College of Health Science, with offices, classrooms, labs and a restaurant."
+  },
+  "959570434": {
+    "name": "Health Science Campus – HSCC",
+    "type": "Academic",
+    "description": "Part of CBU's 9-acre Health Science Campus at 3532 Monroe Street, home of the College of Health Science, with offices, classrooms, labs and a restaurant."
   }
 }
