@@ -70,18 +70,13 @@ const BUS_WIDTH_M = 3.4;
 const BUS_3D_MINZOOM = 16.5; // 2D dot/icon below this, 3D box at/above it
 const METERS_PER_DEG_LAT = 111320;
 
-// The 3D box: four height bands sharing one footprint (see busPolygon()),
-// not one solid-color slab - dark chassis, orange body, glassy windows,
-// light roof. fill-extrusion can't texture a single volume, so a real-ish
-// look means stacking a few flat-colored slices instead.
-const BUS_BAND_LAYERS = [
-  { id: "route1-bus-wheels", base: 0, height: 0.4, color: "#1f2937" },
-  { id: "route1-bus-body", base: 0.4, height: 2.6, color: "#f97316" },
-  { id: "route1-bus-windows", base: 2.6, height: 3.3, color: "#7dd3fc" },
-  { id: "route1-bus-roof", base: 3.3, height: 4.5, color: "#e2e8f0" },
-];
+const BUS_3D_LAYER = "route1-bus-3d";
 const BUS_2D_LAYERS = ["route1-bus-dot", "route1-bus-symbol"];
-const BUS_CLICKABLE_LAYERS = [...BUS_2D_LAYERS, ...BUS_BAND_LAYERS.map((b) => b.id)];
+const BUS_CLICKABLE_LAYERS = [...BUS_2D_LAYERS, BUS_3D_LAYER];
+
+// The selected bus's route: a light casing under an orange line, so it
+// stands out from the street it follows instead of blending into it.
+const ROUTE_LAYERS = ["route1-shapes-casing", "route1-shapes-line"];
 
 function busPolygon(lat, lon, bearingDeg) {
   const theta = (bearingDeg * Math.PI) / 180;
@@ -291,6 +286,16 @@ async function addCustomLayers() {
       data: { type: "FeatureCollection", features: [] },
     });
   }
+  if (!map.getLayer("route1-shapes-casing")) {
+    map.addLayer({
+      id: "route1-shapes-casing",
+      type: "line",
+      source: "route1-shapes",
+      filter: ["==", ["get", "shape_id"], "__none__"],
+      layout: { "line-join": "round", "line-cap": "round" },
+      paint: { "line-color": "#ffffff", "line-width": 10, "line-opacity": 0.9 },
+    });
+  }
   if (!map.getLayer("route1-shapes-line")) {
     map.addLayer({
       id: "route1-shapes-line",
@@ -298,7 +303,7 @@ async function addCustomLayers() {
       source: "route1-shapes",
       filter: ["==", ["get", "shape_id"], "__none__"],
       layout: { "line-join": "round", "line-cap": "round" },
-      paint: { "line-color": "#f97316", "line-width": 4, "line-opacity": 0.75 },
+      paint: { "line-color": "#f97316", "line-width": 5, "line-opacity": 1 },
     });
   }
 
@@ -402,25 +407,25 @@ async function addCustomLayers() {
     });
   }
 
-  // Four height-banded fill-extrusion layers (dark chassis, orange body,
-  // glassy windows, light roof) - see BUS_BAND_LAYERS near the top of this
-  // file for why this beats one solid-color slab.
-  BUS_BAND_LAYERS.forEach(({ id, base, height, color }) => {
-    if (map.getLayer(id)) return;
+  if (!map.getLayer(BUS_3D_LAYER)) {
     map.addLayer({
-      id,
+      id: BUS_3D_LAYER,
       type: "fill-extrusion",
       source: "route1-buses",
       minzoom: BUS_3D_MINZOOM,
       paint: {
-        "fill-extrusion-base": base,
-        "fill-extrusion-height": height,
-        "fill-extrusion-color": color,
+        "fill-extrusion-height": 4.5, // meters - slightly taller than a real bus
+        "fill-extrusion-color": "#f97316",
         "fill-extrusion-opacity": 0.95,
       },
     });
-  });
+  }
 
+  // Loaded only after their sources exist - as separate "load" listeners
+  // they raced this async function, and a fetch that finished first found
+  // no source and was silently dropped.
+  loadRoute1Stops();
+  loadRoute1Shapes();
 }
 
 map.on("load", addCustomLayers);
@@ -522,17 +527,18 @@ map.on("click", "cbu-buildings-fill", (e) => {
 // Shows one bus's own shape_id, or (with no argument) every Route 1
 // variant at once - a stop doesn't belong to a single direction, so
 // clicking one shows the whole route instead of guessing.
+function setRouteFilter(filter) {
+  ROUTE_LAYERS.forEach((id) => {
+    if (map.getLayer(id)) map.setFilter(id, filter);
+  });
+}
+
 function showRouteShapes(shapeId) {
-  if (!map.getLayer("route1-shapes-line")) return;
-  map.setFilter(
-    "route1-shapes-line",
-    shapeId ? ["==", ["get", "shape_id"], shapeId] : null
-  );
+  setRouteFilter(shapeId ? ["==", ["get", "shape_id"], shapeId] : null);
 }
 
 function hideRouteShapes() {
-  if (!map.getLayer("route1-shapes-line")) return;
-  map.setFilter("route1-shapes-line", ["==", ["get", "shape_id"], "__none__"]);
+  setRouteFilter(["==", ["get", "shape_id"], "__none__"]);
 }
 
 // A bus has few enough facts (headsign, speed, id, time) that a transient
@@ -1137,7 +1143,5 @@ async function pollTransit() {
   }
 }
 
-map.on("load", loadRoute1Stops);
-map.on("load", loadRoute1Shapes);
 setInterval(pollTransit, CONFIG.TRANSIT_POLL_MS);
 pollTransit();
