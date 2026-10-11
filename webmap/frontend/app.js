@@ -2,32 +2,50 @@
 
 // A real aircraft silhouette (fuselage, swept wings, tailplane), drawn
 // nose-up so MapLibre's icon-rotate can point it along the heading.
-const PLANE_SVG =
+const planeSvg = (fill) =>
   '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">' +
   '<path d="M32 4 C34.2 4 35.8 7.2 35.8 11.4 L35.8 23.6 L58 36.4 L58 41.6 ' +
   "L35.8 35.4 L35.8 47.6 L42.4 52.6 L42.4 56.4 L32 53.6 L21.6 56.4 " +
   'L21.6 52.6 L28.2 47.6 L28.2 35.4 L6 41.6 L6 36.4 L28.2 23.6 ' +
   'L28.2 11.4 C28.2 7.2 29.8 4 32 4 Z" ' +
-  'fill="#38bdf8" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round"/>' +
+  `fill="${fill}" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round"/>` +
   "</svg>";
 
-function loadPlaneIcon() {
+// Blue = CBU fleet (tracked everywhere), grey = any other aircraft on its
+// first flight out of KRAL. Keyed by the "fleet" property from the backend.
+const FLEET_COLORS = { cbu: "#38bdf8", kral: "#9ca3af" };
+const fleetMatch = (byFleet) => [
+  "match",
+  ["get", "fleet"],
+  "kral",
+  byFleet.kral,
+  byFleet.cbu,
+];
+
+function loadImage(name, svg) {
   return new Promise((resolve) => {
-    if (map.hasImage("plane-icon")) {
+    if (map.hasImage(name)) {
       resolve();
       return;
     }
     const img = new Image();
     img.onload = () => {
-      if (!map.hasImage("plane-icon")) map.addImage("plane-icon", img);
+      if (!map.hasImage(name)) map.addImage(name, img);
       resolve();
     };
     img.onerror = (err) => {
-      console.error("Failed to load plane icon:", err);
+      console.error(`Failed to load ${name}:`, err);
       resolve();
     };
-    img.src = "data:image/svg+xml;base64," + btoa(PLANE_SVG);
+    img.src = "data:image/svg+xml;base64," + btoa(svg);
   });
+}
+
+function loadPlaneIcon() {
+  return Promise.all([
+    loadImage("plane-icon", planeSvg(FLEET_COLORS.cbu)),
+    loadImage("plane-icon-grey", planeSvg(FLEET_COLORS.kral)),
+  ]);
 }
 
 // Top-down bus silhouette, nose-up (windshield at top) so icon-rotate works
@@ -254,7 +272,7 @@ async function addCustomLayers() {
       source: "aircraft",
       paint: {
         "circle-radius": 4,
-        "circle-color": "#38bdf8",
+        "circle-color": fleetMatch(FLEET_COLORS),
         "circle-stroke-color": "#0f172a",
         "circle-stroke-width": 1,
       },
@@ -269,7 +287,7 @@ async function addCustomLayers() {
       type: "symbol",
       source: "aircraft",
       layout: {
-        "icon-image": "plane-icon",
+        "icon-image": fleetMatch({ cbu: "plane-icon", kral: "plane-icon-grey" }),
         "icon-rotate": ["get", "heading"],
         "icon-rotation-alignment": "map",
         "icon-allow-overlap": true,
@@ -583,6 +601,7 @@ function aircraftDetailsHTML(p) {
     `<div class="detail-row"><span>${label}</span><span>${value}</span></div>`;
   return (
     `<div class="detail-title">${p.callsign || p.reg}</div>` +
+    row("Tracked as", p.fleet === "kral" ? "KRAL departure" : "CBU fleet") +
     row("Registration", p.reg) +
     row("Type", p.type || "unknown") +
     row("Owner", p.owner || "unknown") +
@@ -759,9 +778,18 @@ function renderAircraftList(data) {
     return;
   }
   aircraftListEl.innerHTML = "";
-  data.forEach((a) => {
+  // CBU fleet first, then KRAL departures, each alphabetical.
+  const sorted = [...data].sort(
+    (a, b) =>
+      (a.fleet === "kral") - (b.fleet === "kral") ||
+      (a.callsign || a.reg).localeCompare(b.callsign || b.reg),
+  );
+  sorted.forEach((a) => {
     const row = document.createElement("button");
-    row.className = "aircraft-row" + (a.reg === selectedReg ? " selected" : "");
+    row.className =
+      "aircraft-row" +
+      (a.fleet === "kral" ? " fleet-kral" : " fleet-cbu") +
+      (a.reg === selectedReg ? " selected" : "");
     row.dataset.reg = a.reg;
     row.textContent = `${a.callsign || a.reg} (${a.type || "?"})`;
     row.addEventListener("click", () => selectAircraft(a.reg));

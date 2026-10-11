@@ -72,6 +72,11 @@ MIN_GROUND_SECONDS = 90
 # instead of being attributed to whatever happens to be nearest.
 AIRPORT_MATCH_KM = 4.0
 
+# KRAL departures come and go all day; once one has been gone this long its
+# trail and flight record are dropped so neither grows without bound. CBU
+# aircraft keep the normal TRACK_RETENTION_HOURS.
+DEPARTURE_FORGET_SECONDS = 900
+
 # When the last CoT arrived, so the UI can be honest about the TAK link
 # instead of just showing an empty map.
 LINK_STATE: dict[str, object] = {"connected": False, "last_cot": None}
@@ -167,8 +172,10 @@ def _parse_aircraft_cot(uid: str, detail, lat: float, lon: float, hae: float) ->
     owner = aircraft_el.get("owner") or None
     hex_id = aircraft_el.get("hex") or None
     on_ground = (aircraft_el.get("ground") or "").lower() == "true"
+    # Events from before the fleet attribute existed are all CBU aircraft.
+    fleet = aircraft_el.get("fleet") or ("kral" if uid.startswith("KRAL-") else "cbu")
 
-    reg = reg or uid.removeprefix("CBU-")
+    reg = reg or uid.removeprefix("CBU-").removeprefix("KRAL-")
 
     callsign = None
     contact_el = detail.find("contact")
@@ -188,6 +195,9 @@ def _parse_aircraft_cot(uid: str, detail, lat: float, lon: float, hae: float) ->
         "speed_kt": round(speed_ms / 0.514444),
         "heading": course,
         "on_ground": on_ground,
+        "fleet": fleet,
+        "dep": aircraft_el.get("dep") or None,
+        "dep_time": aircraft_el.get("dep_time") or None,
         "last_seen": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -415,6 +425,25 @@ def _update_flight(parsed: dict, was_on_ground: bool) -> None:
         flight["arrival_time"] = parsed["last_seen"]
 
 
+def airport_by_code(code: str) -> dict | None:
+    for ap in _AIRPORTS:
+        if ap["code"] == code:
+            return {"code": ap["code"], "name": ap["name"], "km": 0.0}
+    return {"code": code, "name": None, "km": 0.0}
+
+
+def _apply_reported_departure(parsed: dict) -> None:
+    """A KRAL departure is often first seen already climbing out, so no
+    ground->airborne transition is ever observed here - the feeder's own
+    departure call fills that gap."""
+    if not parsed.get("dep"):
+        return
+    flight = FLIGHT_STATE.setdefault(parsed["reg"], _blank_flight())
+    if flight.get("departure") is None and flight.get("arrival") is None:
+        flight["departure"] = airport_by_code(parsed["dep"])
+        flight["departure_time"] = parsed.get("dep_time")
+
+
 def _update_track(parsed: dict, was_on_ground: bool) -> None:
     """While on the ground only the latest fix is kept; at liftoff that fix is
     retained as the trail's origin so the line starts at the runway."""
@@ -445,6 +474,23 @@ def prune_stale() -> None:
     for uid in stale:
         del AIRCRAFT_STATE[uid]
 
+    live_regs = {ac["reg"] for ac in AIRCRAFT_STATE.values()}
+    for reg in list(TRACK_STATE.keys() | FLIGHT_STATE.keys()):
+        if reg in adsb_tak.CBU_TAILS or reg in live_regs:
+            continue
+        points = TRACK_STATE.get(reg) or []
+        flight = FLIGHT_STATE.get(reg) or {}
+        last = points[-1]["t"] if points else (
+            flight.get("arrival_time") or flight.get("departure_time")
+        )
+        try:
+            gone = (now - datetime.fromisoformat(last)).total_seconds()
+        except (TypeError, ValueError):
+            gone = DEPARTURE_FORGET_SECONDS + 1
+        if gone > DEPARTURE_FORGET_SECONDS:
+            TRACK_STATE.pop(reg, None)
+            FLIGHT_STATE.pop(reg, None)
+
     stale_buses = [
         vid
         for vid, b in BUS_STATE.items()
@@ -472,6 +518,7 @@ async def _drain(rx_queue: asyncio.Queue) -> None:
             # restored from disk.
             was_on_ground = prev["on_ground"] if prev else False
             _update_flight(aircraft, was_on_ground)
+            _apply_reported_departure(aircraft)
             aircraft["flight"] = FLIGHT_STATE.get(aircraft["reg"])
             AIRCRAFT_STATE[aircraft["uid"]] = aircraft
             _update_track(aircraft, was_on_ground)

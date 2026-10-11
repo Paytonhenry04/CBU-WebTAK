@@ -82,6 +82,30 @@ html, body, #map {
   margin-bottom: 4px;
 }
 
+#aircraft-legend {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 6px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin: 0 4px 0 0;
+  vertical-align: -1px;
+}
+
+.legend-swatch.fleet-cbu {
+  background: #38bdf8;
+}
+
+.legend-swatch.fleet-kral {
+  background: #9ca3af;
+  margin-left: 10px;
+}
+
 #aircraft-list {
   display: flex;
   flex-direction: column;
@@ -97,6 +121,15 @@ html, body, #map {
   font-size: 12px;
   text-align: left;
   cursor: pointer;
+}
+
+/* Same colours as the map icons: blue CBU fleet, grey KRAL departures. */
+.aircraft-row.fleet-cbu {
+  border-left: 4px solid #38bdf8;
+}
+
+.aircraft-row.fleet-kral {
+  border-left: 4px solid #9ca3af;
 }
 
 .aircraft-row:hover {
