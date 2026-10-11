@@ -1,0 +1,87 @@
+# CBU WebTAK reverse proxy - template.
+#
+# Copy to deploy/Caddyfile (git-ignored, so your real hostnames and network
+# ranges stay local), replace the example.duckdns.org names and the LAN
+# range, then run install.sh, which installs it as /etc/caddy/Caddyfile.
+# It must be a copy, not a symlink - a home directory is usually mode 0750,
+# so the unprivileged 'caddy' user cannot traverse into it to read the file.
+
+{
+	# HTTP/3 is UDP/443. Forwarding UDP through a consumer router is an
+	# untested unknown and h1+h2 is plenty here, so it's disabled - one less
+	# failure mode on the Socket.IO long-polling path.
+	servers {
+		protocols h1 h2
+	}
+
+	# Use Let's Encrypt staging while debugging Caddyfile changes, to avoid
+	# burning the 5-failures-per-hour production limit.
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+
+	# Optional: add `email you@example.com` for Let's Encrypt expiry
+	# warnings.
+}
+
+# --- Web map: public, no login -------------------------------------------
+# All frontend calls are relative and its two external assets (jsdelivr,
+# openfreemap) are already https, so this converts with zero mixed content.
+webtak.example.duckdns.org {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8090
+}
+
+# --- Private sites: VPN / home LAN only ----------------------------------
+# The FTS dashboard and API are admin-only, so the internet gets a 403
+# instead of FreeTAKServer's login page. Allowed sources:
+#   100.64.0.0/10, fd7a:115c:a1e0::/48  Tailscale (tailnet devices)
+#   192.168.1.0/24                      home LAN - set to yours
+#   172.28.0.0/24                       taknet - the UI container's own
+#                                       server-side calls to api.* (see
+#                                       extra_hosts in ftserver/compose.yaml)
+#   127.0.0.1, ::1                      the server itself
+# From outside the LAN, reach these names over Tailscale by pointing them at
+# the server's tailnet IP in the client's hosts file - public DNS still
+# resolves them to the router's WAN address.
+# ACME challenges are answered before site routes, so renewals still work.
+(tailnet_only) {
+	@public not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48 192.168.1.0/24 172.28.0.0/24 127.0.0.1 ::1
+	respond @public "Not available from the public internet - connect over Tailscale." 403
+}
+
+# --- FreeTAKServer admin dashboard ---------------------------------------
+fts.example.duckdns.org {
+	import tailnet_only
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:5000 {
+		# If Flask ever emits an absolute Location, rewrite the scheme so
+		# the login flow can't bounce the browser back down to http://.
+		header_down Location "^http://" "https://"
+	}
+}
+
+# --- FreeTAKServer REST + Socket.IO API ----------------------------------
+# The dashboard's gauges are driven by a Socket.IO connection the BROWSER
+# opens directly here - a different origin from the dashboard - pinned to
+# HTTP long-polling by the allow_upgrades=False patch in compose.yaml.
+# Long-polling holds a GET open for up to 25s, so nothing here may cut a
+# request short or buffer the response. Must match FTS_API_HOST in
+# ftserver/.env.
+api.example.duckdns.org {
+	import tailnet_only
+	reverse_proxy 127.0.0.1:19023 {
+		# Stream responses straight through. Engine.IO polling replies
+		# carry a normal Content-Length and wouldn't trip Caddy's
+		# auto-detection of streaming responses.
+		flush_interval -1
+
+		transport http {
+			# No upstream deadline: a poll held open for 25s must not be
+			# mistaken for a stalled backend.
+			read_timeout 0
+			write_timeout 0
+			dial_timeout 10s
+		}
+	}
+	# No `encode` here on purpose - compressing a long-poll response can
+	# delay delivery behind the encoder's buffer, and the payloads are tiny.
+}

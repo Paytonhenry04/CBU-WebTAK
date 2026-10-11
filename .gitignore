@@ -6,3 +6,11 @@ ftserver/.env
 PROJECT_STATUS.md
 webmap/track_history.json
 webmap/flight_state.json
+
+# Local-only ops docs and the real proxy config: they name this deployment's
+# hosts, network layout and access rules, so they stay on the server and out
+# of the public repo. deploy/Caddyfile.example is the template.
+HowTo.md
+deploy/HTTPS.md
+deploy/Caddyfile
+.claude/

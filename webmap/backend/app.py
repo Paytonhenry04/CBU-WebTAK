@@ -5,9 +5,9 @@ Serves the MapLibre frontend, the cached OSM GeoJSON, and a polling-friendly
 /api/aircraft endpoint fed by fts_listener.py - a real TAK client consuming
 CoT from FreeTAKServer. Nothing here talks to adsb.fi; the aircraft data
 reaches this process over the TAK protocol.
-The browser-facing endpoint is deliberately polling-based, not WebSockets - see
-PROJECT_STATUS.md for why: WebSocket upgrades through this project's home
-router were never confirmed reliable, while plain HTTP polling was proven
+The browser-facing endpoint is deliberately polling-based, not WebSockets:
+WebSocket upgrades through a consumer home router were never confirmed
+reliable, while plain HTTP polling was proven
 reliable end-to-end (LAN and genuinely external) every time it was tested.
 """
 

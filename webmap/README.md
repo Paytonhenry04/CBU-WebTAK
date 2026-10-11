@@ -186,5 +186,5 @@ saw it; it can't be back-filled. State survives restarts via
 - The campus outline is OSM relation 13218766 (`amenity=university`), a
   6-parcel multipolygon - not a hand-drawn boundary, so it reflects
   whatever OSM contributors have mapped.
-- Port 8090 must be UPnP-forwarded (same as 8087/5000/19023) for this to be
-  reachable outside the home LAN - see PROJECT_STATUS.md for the pattern.
+- Port 8090 is not exposed directly: the map is served over HTTPS through
+  the Caddy reverse proxy (see `deploy/Caddyfile.example`).

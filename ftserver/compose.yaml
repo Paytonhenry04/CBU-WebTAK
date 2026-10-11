@@ -87,11 +87,11 @@ services:
     # listens on 443 and proxies on to the real API.
     command: sh -c "mkdir -p /home/freetak/data && exec /home/freetak/docker-run.sh"
     extra_hosts:
-      - "api.example.duckdns.org:172.28.0.1"
+      - "${FTS_API_HOST:?set FTS_API_HOST in .env}:172.28.0.1"
     volumes:
       - free-tak-ui-db:/home/freetak/:Z,rw
     environment:
-      FTS_IP: "api.example.duckdns.org"
+      FTS_IP: "${FTS_API_HOST:?set FTS_API_HOST in .env}"
       FTS_API_PORT: "443"
       FTS_API_PROTO: "https"
       FTS_UI_EXPOSED_IP: "freetakserver-ui"

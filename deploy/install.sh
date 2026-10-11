@@ -62,12 +62,15 @@ echo
 
 # --- Reverse proxy (independent of cbu-tak.target on purpose: TLS
 # termination and cert renewal must survive "systemctl stop cbu-tak.target",
-# a routine maintenance command - see deploy/Caddyfile for the full reasoning
-# and deploy/HTTPS.md for the setup this depends on: ports 80/443 forwarded,
-# DNS records, and the ftserver/compose.yaml FTS_IP/PORT/PROTO change). -----
-if command -v caddy >/dev/null 2>&1; then
+# a routine maintenance command - see deploy/Caddyfile.example for the full
+# reasoning. Depends on ports 80/443 forwarded to this host, DNS records for
+# each site, and FTS_API_HOST in ftserver/.env matching the api.* site). ----
+if command -v caddy >/dev/null 2>&1 && [ ! -f "$HERE/Caddyfile" ]; then
+  echo "!! deploy/Caddyfile not found - reverse proxy / HTTPS skipped."
+  echo "   Copy deploy/Caddyfile.example to deploy/Caddyfile and fill it in."
+elif command -v caddy >/dev/null 2>&1; then
   echo "==> Installing Caddyfile"
-  # This must be a copy, not a symlink: /home/payton is mode 0750, so the
+  # This must be a copy, not a symlink: the home dir is mode 0750, so the
   # unprivileged 'caddy' user cannot traverse into it to follow a symlink.
   install -m 644 -o root -g root "$HERE/Caddyfile" /etc/caddy/Caddyfile
   caddy validate --config /etc/caddy/Caddyfile
@@ -78,7 +81,7 @@ if command -v caddy >/dev/null 2>&1; then
   echo "Caddy: $(systemctl is-active caddy)"
 else
   echo "!! caddy not installed - reverse proxy / HTTPS skipped."
-  echo "   See deploy/HTTPS.md to set it up."
+  echo "   Install Caddy, then use deploy/Caddyfile.example."
 fi
 echo
 cat <<'EOT'
