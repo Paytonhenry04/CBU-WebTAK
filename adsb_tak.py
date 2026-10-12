@@ -73,8 +73,9 @@ LOST_SECONDS = 600
 STATE_FILE = Path(__file__).resolve().with_name("adsb_state.json")
 AIRPORTS_FILE = Path(__file__).resolve().parent / "webmap" / "data" / "airports.geojson"
 
-# Where to send CoT. Local FreeTAKServer on this box = tcp://127.0.0.1:8087
-COT_URL = "tcp://127.0.0.1:8087"
+# Where to send CoT: OpenTAKServer's plain-TCP streaming port on this box.
+# transit_tak.py, weather_tak.py and the web map's listener all reuse this.
+COT_URL = "tcp://127.0.0.1:8088"
 
 
 SELF_UID = "CBU-ADSB-FEED"

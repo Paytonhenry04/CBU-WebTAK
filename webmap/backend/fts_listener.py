@@ -31,7 +31,7 @@ import adsb_tak  # noqa: E402 - reuse STALE_SECONDS and the presence format
 
 logger = logging.getLogger("fts_listener")
 
-COT_URL = "tcp://127.0.0.1:8087"
+COT_URL = adsb_tak.COT_URL
 SELF_UID = "CBU-WEBMAP"
 PRESENCE_SECONDS = 120
 RECONNECT_SECONDS = 5

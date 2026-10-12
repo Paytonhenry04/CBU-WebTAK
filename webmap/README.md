@@ -11,7 +11,7 @@ FreeTAKServer over the TAK protocol**. Runs alongside `adsb_tak.py` and the
       |
       | poll
       v
- adsb_tak.py  --- CoT/TCP --->  FreeTAKServer (:8087)
+ adsb_tak.py  --- CoT/TCP --->  OpenTAKServer (:8088)
  (registers as                        |
   a TAK client)                       | relays CoT
                                       v
