@@ -548,7 +548,17 @@ async def _save_loop() -> None:
             save_tracks()
 
 
+# OpenTAKServer opens its RabbitMQ channel for a new connection
+# asynchronously. A presence CoT that arrives before that channel is open
+# still records our uid, but the group binding that routes other clients'
+# CoT to us is skipped and never retried - the link stays up and receives
+# nothing (confirmed 2026-10-12: 0 events with no delay, all of them with
+# 3s). So give the channel time to open before announcing ourselves.
+FIRST_PRESENCE_DELAY_SECONDS = 5
+
+
 async def _presence_loop(tx_queue: asyncio.Queue) -> None:
+    await asyncio.sleep(FIRST_PRESENCE_DELAY_SECONDS)
     while True:
         await tx_queue.put(_self_presence())
         await asyncio.sleep(PRESENCE_SECONDS)
