@@ -1,0 +1,39 @@
+// Lets the OpenTAKServer dashboard's Start/Stop/Restart buttons work.
+//
+// OpenTAKServer runs as an unprivileged user, so systemctl would otherwise ask
+// for a password. This allows only start/stop/restart, only for the units
+// listed on the dashboard (service_status.py SERVICES), and only for the user
+// OpenTAKServer runs as. Which units may be stopped is narrowed further in
+// service_status.py.
+//
+// Install (polkit picks it up immediately, no restart needed):
+//   sudo install -m 644 deploy/ots-status/cbu-service-control.rules /etc/polkit-1/rules.d/50-cbu-service-control.rules
+// Edit OTS_USER below first if OpenTAKServer doesn't run as "payton"
+// (systemctl show opentakserver -p User).
+
+var OTS_USER = "payton";
+
+var UNITS = [
+    "opentakserver.service",
+    "eud_handler.service",
+    "eud_handler_ssl.service",
+    "cot_parser.service",
+    "rabbitmq-server.service",
+    "postgresql@16-main.service",
+    "nginx.service",
+    "cbu-adsb-tak.service",
+    "cbu-transit-tak.service",
+    "cbu-weather-tak.service",
+    "cbu-webmap.service"
+];
+
+var VERBS = ["start", "stop", "restart"];
+
+polkit.addRule(function (action, subject) {
+    if (action.id == "org.freedesktop.systemd1.manage-units" &&
+        subject.user == OTS_USER &&
+        UNITS.indexOf(action.lookup("unit")) >= 0 &&
+        VERBS.indexOf(action.lookup("verb")) >= 0) {
+        return polkit.Result.YES;
+    }
+});
